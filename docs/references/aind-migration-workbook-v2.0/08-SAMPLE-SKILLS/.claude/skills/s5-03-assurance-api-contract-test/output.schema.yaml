@@ -1,0 +1,258 @@
+# Schema: contract-report.yaml
+# Skill: s5-03-assurance-api-contract-test
+# Stage: 5 - Assurance
+# Phase: 5.3 - API Contract Test
+# Version: 1.0.0
+
+schema_info:
+  name: "api-contract"
+  version: "1.0.0"
+  skill_id: "s5-03-assurance-api-contract-test"
+  output_files:
+    - "contract-report.yaml"
+    - "openapi/{domain}.yaml"
+  output_path: "work/specs/stage5-outputs/phase3/"
+
+# =============================================================================
+# contract-report.yaml 구조
+# =============================================================================
+contract_report:
+  root:
+    required:
+      - metadata
+      - summary
+      - openapi_validation
+      - miplatform_compatibility
+      - gate_evaluation
+    optional:
+      - by_domain
+      - violations
+      - generated_specs
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s5-03-assurance-api-contract-test"
+      - generated_at:
+          type: string
+          $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+      - miplatform_reference:
+          type: string
+
+  summary:
+    required:
+      - total_endpoints:
+          type: integer
+          minimum: 0
+      - openapi_compliant:
+          type: integer
+          minimum: 0
+      - miplatform_compatible:
+          type: integer
+          minimum: 0
+      - compliance_rate:
+          type: number
+          minimum: 0
+          maximum: 100
+      - result:
+          type: string
+          enum: ["PASS", "CONDITIONAL", "FAIL"]
+
+  openapi_validation:
+    required:
+      - total_controllers:
+          type: integer
+      - spec_generated:
+          type: integer
+      - validation_passed:
+          type: integer
+      - schema_errors:
+          type: integer
+    optional:
+      - generated_files:
+          type: array
+
+  miplatform_compatibility:
+    required:
+      - dataset_compatible:
+          type: integer
+      - request_format_valid:
+          type: integer
+      - response_format_valid:
+          type: integer
+      - content_type_correct:
+          type: integer
+      - compatibility_rate:
+          type: number
+          minimum: 0
+          maximum: 100
+
+  by_domain:
+    type: object
+    each:
+      required:
+        - endpoints:
+            type: integer
+        - compliant:
+            type: integer
+        - compatibility_rate:
+            type: number
+
+  violations:
+    type: array
+    item:
+      required:
+        - id:
+            type: string
+            pattern: "^API-\\d{3}$"
+        - type:
+            type: string
+            enum: ["openapi_violation", "miplatform_incompatibility", "schema_error"]
+        - severity:
+            type: string
+            enum: ["critical", "major", "minor"]
+        - endpoint:
+            type: string
+        - description:
+            type: string
+
+  gate_evaluation:
+    required:
+      - gate_id:
+          type: string
+          exact: "G5.3"
+      - result:
+          type: string
+          enum: ["PASS", "CONDITIONAL", "FAIL"]
+      - criteria:
+          type: array
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys"
+      targets: ["metadata", "summary", "openapi_validation", "miplatform_compatibility", "gate_evaluation"]
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V002"
+      name: "generated_by_exact"
+      target: "metadata.generated_by"
+      expected: "s5-03-assurance-api-contract-test"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V003"
+      name: "result_enum_valid"
+      target: "summary.result"
+      enum: ["PASS", "CONDITIONAL", "FAIL"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V004"
+      name: "violation_type_valid"
+      target: "violations[].type"
+      enum: ["openapi_violation", "miplatform_incompatibility", "schema_error"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "gate_id_exact"
+      target: "gate_evaluation.gate_id"
+      expected: "G5.3"
+      on_fail: "ERROR"
+      blocking: true
+
+  metric:
+    - rule_id: "V006"
+      name: "compliance_rate_range"
+      target: "summary.compliance_rate"
+      range: [0, 100]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V007"
+      name: "compatibility_rate_range"
+      target: "miplatform_compatibility.compatibility_rate"
+      range: [0, 100]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V008"
+      name: "pass_criteria_compliance"
+      description: "PASS 시 compliance_rate >= 95%"
+      check: "if result == 'PASS' then compliance_rate >= 95"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V009"
+      name: "pass_criteria_compatibility"
+      description: "PASS 시 compatibility_rate >= 95%"
+      check: "if result == 'PASS' then compatibility_rate >= 95"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V010"
+      name: "openapi_generated_match"
+      description: "spec_generated == total_controllers"
+      check: "spec_generated == total_controllers"
+      on_fail: "WARNING"
+      blocking: false
+
+# =============================================================================
+# 예시
+# =============================================================================
+valid_example:
+  metadata:
+    generated_by: "s5-03-assurance-api-contract-test"
+    generated_at: "2026-01-08T20:00:00Z"
+    miplatform_reference: "work/specs/stage1-outputs/phase2/miplatform-protocol.yaml"
+
+  summary:
+    total_endpoints: 2100
+    openapi_compliant: 2079
+    miplatform_compatible: 2058
+    compliance_rate: 98.0
+    result: "PASS"
+
+  openapi_validation:
+    total_controllers: 700
+    spec_generated: 700
+    validation_passed: 693
+    schema_errors: 7
+    generated_files:
+      - "openapi/pa.yaml"
+      - "openapi/mm.yaml"
+
+  miplatform_compatibility:
+    dataset_compatible: 2058
+    request_format_valid: 2079
+    response_format_valid: 2079
+    content_type_correct: 2100
+    compatibility_rate: 98.0
+
+  by_domain:
+    PA:
+      endpoints: 1329
+      compliant: 1309
+      compatibility_rate: 98.5
+    MM:
+      endpoints: 360
+      compliant: 353
+      compatibility_rate: 98.1
+
+  gate_evaluation:
+    gate_id: "G5.3"
+    result: "PASS"
+    criteria:
+      - check: "compliance_rate >= 95%"
+        actual: 98.0
+        result: "PASS"
+      - check: "compatibility_rate >= 95%"
+        actual: 98.0
+        result: "PASS"

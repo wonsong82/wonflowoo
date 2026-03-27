@@ -1,0 +1,49 @@
+# ============================================================================
+# Custom Project Example - project.yaml
+# ============================================================================
+# Minimal project configuration for custom projects.
+# Customize this template for your specific needs.
+
+name: "my-custom-project"
+description: "Custom project description"
+
+feature:
+  id_prefix: "FEAT-"
+  gap_suffix: "GAP"
+  skip_gap_features: true
+
+domain:
+  skip_domains: []
+  priority_map:
+    P0-Foundation: []
+    P1-Hub: []
+    P2-Core: []
+    P3-Supporting: []
+
+# Customize phase types based on your workflow
+phase_types:
+  stage1:
+    phase1: "domain"
+    phase2: "domain"
+    phase3: "feature"
+    phase4: "feature"
+
+paths:
+  source_base: ""        # Set your source directory
+  target_base: ""        # Set your target directory
+  specs_root: "work/specs"
+
+# Define only the stages you need
+stages:
+  stage1:
+    name: "Discovery"
+    phases: ["phase1", "phase2", "phase3", "phase4"]
+    skills:
+      phase1: "s1-01-discovery-feature-inventory"
+      phase2: "s1-02-discovery-miplatform-protocol"
+      phase3: "s1-03-discovery-deep-analysis"
+      phase4: "s1-04-discovery-spec-generation"
+
+task_sources:
+  feature_inventory_base: "work/specs/stage1-outputs/phase1"
+  feature_inventory_pattern: "work/specs/stage1-outputs/phase1/{priority}/{domain}/feature-inventory.yaml"

@@ -1,0 +1,398 @@
+# Schema: dependency-graph.yaml, circular-dependencies.yaml, resolution-plan.yaml
+# Skill: s3-01-preparation-dependency-graph
+# Stage: 3 - Preparation
+# Phase: 3.1 - Dependency Graph Analysis
+# Version: 1.0.0
+
+schema_info:
+  name: "dependency-graph"
+  version: "1.0.0"
+  skill_id: "s3-01-preparation-dependency-graph"
+  output_files:
+    - "dependency-graph.yaml"
+    - "circular-dependencies.yaml"
+    - "resolution-plan.yaml"
+  output_path: "work/specs/stage3-outputs/phase1/"
+
+# =============================================================================
+# dependency-graph.yaml 구조
+# =============================================================================
+dependency_graph:
+  root:
+    required:
+      - metadata
+      - summary
+      - nodes
+      - edges
+    optional:
+      - adjacency_matrix
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s3-01-preparation-dependency-graph"
+      - generated_at:
+          type: string
+          $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+      - total_domains:
+          type: integer
+          minimum: 1
+      - total_edges:
+          type: integer
+          minimum: 0
+
+  summary:
+    required:
+      - nodes:
+          type: integer
+      - edges:
+          type: integer
+      - average_dependencies:
+          type: number
+    optional:
+      - max_outgoing:
+          type: object
+      - max_incoming:
+          type: object
+
+  nodes:
+    type: array
+    item:
+      $ref: "#/node_item"
+
+  node_item:
+    required:
+      - id:
+          type: string
+          $ref: "common-types.schema.yaml#/identifiers/domain_code"
+      - name:
+          type: string
+      - priority:
+          type: string
+          pattern: "^P[0-3]$"
+      - outgoing_count:
+          type: integer
+          minimum: 0
+      - incoming_count:
+          type: integer
+          minimum: 0
+
+  edges:
+    type: array
+    item:
+      $ref: "#/edge_item"
+
+  edge_item:
+    required:
+      - id:
+          type: string
+          pattern: "^E-\\d{3}$"
+      - from:
+          type: string
+      - to:
+          type: string
+      - direction:
+          type: string
+      - dependency_type:
+          type: string
+          enum: ["service", "entity", "sql", "utility"]
+      - weight:
+          type: integer
+          minimum: 1
+    optional:
+      - critical:
+          type: boolean
+      - calls:
+          type: array
+
+# =============================================================================
+# circular-dependencies.yaml 구조
+# =============================================================================
+circular_dependencies:
+  root:
+    required:
+      - metadata
+      - summary
+      - cycles
+    optional: []
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s3-01-preparation-dependency-graph"
+      - generated_at:
+          type: string
+
+  summary:
+    required:
+      - total_cycles:
+          type: integer
+          minimum: 0
+      - critical_cycles:
+          type: integer
+          minimum: 0
+      - major_cycles:
+          type: integer
+          minimum: 0
+      - minor_cycles:
+          type: integer
+          minimum: 0
+
+  cycles:
+    type: array
+    item:
+      $ref: "#/cycle_item"
+
+  cycle_item:
+    required:
+      - id:
+          type: string
+          pattern: "^CYC-\\d{3}$"
+      - severity:
+          type: string
+          enum: ["critical", "major", "minor"]
+      - domains:
+          type: array
+          items:
+            type: string
+      - chain:
+          type: string
+          description: "도메인 순환 체인 표기 (예: PA → MM → PA)"
+      - length:
+          type: integer
+          minimum: 2
+    optional:
+      - total_calls:
+          type: integer
+      - edges:
+          type: array
+      - impact:
+          type: object
+      - notes:
+          type: string
+
+# =============================================================================
+# resolution-plan.yaml 구조
+# =============================================================================
+resolution_plan:
+  root:
+    required:
+      - metadata
+      - summary
+      - resolutions
+    optional:
+      - execution_order
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s3-01-preparation-dependency-graph"
+      - generated_at:
+          type: string
+
+  summary:
+    required:
+      - total_resolutions:
+          type: integer
+          minimum: 0
+    optional:
+      - interface_extraction:
+          type: integer
+      - event_based:
+          type: integer
+      - module_merge:
+          type: integer
+
+  resolutions:
+    type: array
+    item:
+      $ref: "#/resolution_item"
+
+  resolution_item:
+    required:
+      - cycle_id:
+          type: string
+          pattern: "^CYC-\\d{3}$"
+      - severity:
+          type: string
+          enum: ["critical", "major", "minor"]
+      - chain:
+          type: string
+      - strategy:
+          type: string
+          enum: ["interface_extraction", "event_based", "module_merge"]
+      - priority:
+          type: integer
+          minimum: 1
+    optional:
+      - analysis:
+          type: object
+      - solution:
+          type: object
+      - estimated_effort:
+          type: string
+      - wave_impact:
+          type: string
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys_graph"
+      targets: ["metadata", "summary", "nodes", "edges"]
+      applies_to: "dependency-graph.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V002"
+      name: "required_keys_cycles"
+      targets: ["metadata", "summary", "cycles"]
+      applies_to: "circular-dependencies.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V003"
+      name: "required_keys_resolution"
+      targets: ["metadata", "summary", "resolutions"]
+      applies_to: "resolution-plan.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V004"
+      name: "generated_by_exact"
+      target: "metadata.generated_by"
+      expected: "s3-01-preparation-dependency-graph"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "dependency_type_enum_valid"
+      target: "edges[].dependency_type"
+      enum: ["service", "entity", "sql", "utility"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V006"
+      name: "severity_enum_valid"
+      target: "cycles[].severity"
+      enum: ["critical", "major", "minor"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V007"
+      name: "strategy_enum_valid"
+      target: "resolutions[].strategy"
+      enum: ["interface_extraction", "event_based", "module_merge"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V008"
+      name: "edge_id_pattern"
+      target: "edges[].id"
+      pattern: "^E-\\d{3}$"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V009"
+      name: "cycle_id_pattern"
+      target: "cycles[].id"
+      pattern: "^CYC-\\d{3}$"
+      on_fail: "ERROR"
+      blocking: true
+
+  metric:
+    - rule_id: "V010"
+      name: "all_domains_loaded"
+      description: "12개 도메인 모두 로드"
+      check: "nodes.length >= 12"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V011"
+      name: "cycles_count_consistency"
+      description: "severity별 합계가 total_cycles와 일치"
+      check: "critical_cycles + major_cycles + minor_cycles == total_cycles"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V012"
+      name: "all_cycles_have_resolution"
+      description: "모든 순환 체인에 resolution 할당"
+      check: "resolutions.length >= cycles.length"
+      on_fail: "WARNING"
+      blocking: false
+
+# =============================================================================
+# 예시
+# =============================================================================
+valid_example_dependency_graph:
+  metadata:
+    generated_by: "s3-01-preparation-dependency-graph"
+    generated_at: "2026-01-08T14:00:00Z"
+    total_domains: 12
+    total_edges: 45
+
+  summary:
+    nodes: 12
+    edges: 45
+    average_dependencies: 3.75
+    max_outgoing: { domain: "PA", count: 8 }
+    max_incoming: { domain: "CM", count: 11 }
+
+  nodes:
+    - id: "PA"
+      name: "Production"
+      priority: "P2"
+      outgoing_count: 8
+      incoming_count: 3
+
+  edges:
+    - id: "E-001"
+      from: "PA"
+      to: "MM"
+      direction: "PA → MM"
+      dependency_type: "service"
+      weight: 15
+      critical: true
+
+valid_example_circular_dependencies:
+  metadata:
+    generated_by: "s3-01-preparation-dependency-graph"
+    generated_at: "2026-01-08T14:00:00Z"
+
+  summary:
+    total_cycles: 3
+    critical_cycles: 1
+    major_cycles: 1
+    minor_cycles: 1
+
+  cycles:
+    - id: "CYC-001"
+      severity: "critical"
+      domains: ["PA", "MM"]
+      chain: "PA → MM → PA"
+      length: 2
+      total_calls: 20
+
+valid_example_resolution_plan:
+  metadata:
+    generated_by: "s3-01-preparation-dependency-graph"
+    generated_at: "2026-01-08T14:00:00Z"
+
+  summary:
+    total_resolutions: 3
+    interface_extraction: 2
+    event_based: 1
+
+  resolutions:
+    - cycle_id: "CYC-001"
+      severity: "critical"
+      chain: "PA → MM → PA"
+      strategy: "interface_extraction"
+      priority: 1

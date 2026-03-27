@@ -1,0 +1,172 @@
+# ============================================================================
+# Project Readiness Validation Rules
+# ============================================================================
+# Defines validation criteria for Choisor initialization.
+
+version: "1.0.0"
+
+# Validation stages
+stages:
+  - name: "prerequisites"
+    description: "Check prerequisite directories and files"
+    blocking: true
+    checks:
+      - id: "claude_dir"
+        description: "Check .claude/ directory exists"
+        type: "directory_exists"
+        path: ".claude"
+        blocking: true
+        error_message: "Claude Code not initialized. Run 'claude init' first."
+
+      - id: "skills_dir"
+        description: "Check .claude/skills/ directory exists"
+        type: "directory_exists"
+        path: ".claude/skills"
+        blocking: true
+        error_message: "Skills directory not found. Create .claude/skills/ first."
+
+  - name: "existing_config"
+    description: "Check for existing Choisor configuration"
+    blocking: false
+    checks:
+      - id: "choisor_dir"
+        description: "Check .choisor/ directory exists"
+        type: "directory_exists"
+        path: ".choisor"
+        blocking: false
+        warning_message: ".choisor/ already exists. Use --force to reinitialize."
+        action_on_exists: "prompt_reinitialize"
+
+      - id: "config_yaml"
+        description: "Check config.yaml exists"
+        type: "file_exists"
+        path: ".choisor/config.yaml"
+        blocking: false
+        warning_message: "Existing configuration found."
+
+  - name: "template_validation"
+    description: "Validate template selection"
+    blocking: true
+    checks:
+      - id: "template_valid"
+        description: "Template must be valid"
+        type: "enum_value"
+        field: "template"
+        allowed_values:
+          - "spring-migration"
+          - "custom"
+          - "hallain-tft"
+        blocking: true
+        error_message: "Unknown template. Use: spring-migration, custom, or hallain-tft"
+
+  - name: "required_parameters"
+    description: "Validate required parameters"
+    blocking: true
+    checks:
+      - id: "name_provided"
+        description: "Project name must be provided"
+        type: "non_empty"
+        field: "name"
+        blocking: true
+        error_message: "Project name is required."
+
+      - id: "source_base_provided"
+        description: "Source base path must be provided"
+        type: "non_empty"
+        field: "paths.source_base"
+        blocking: true
+        error_message: "Source base path is required."
+
+      - id: "target_base_provided"
+        description: "Target base path must be provided"
+        type: "non_empty"
+        field: "paths.target_base"
+        blocking: true
+        error_message: "Target base path is required."
+
+  - name: "path_validation"
+    description: "Validate paths exist"
+    blocking: false
+    checks:
+      - id: "source_exists"
+        description: "Source base directory should exist"
+        type: "directory_exists"
+        field: "paths.source_base"
+        blocking: false
+        warning_message: "Source directory not found. Will be validated later."
+
+  - name: "skill_discovery"
+    description: "Discover available skills"
+    blocking: false
+    checks:
+      - id: "skills_found"
+        description: "At least one skill should be found"
+        type: "glob_count"
+        pattern: ".claude/skills/s*-*/SKILL.md"
+        minimum: 1
+        blocking: false
+        warning_message: "No stage skills found. Skills can be added later."
+
+  - name: "contract_validation"
+    description: "Validate inter-stage contracts"
+    blocking: false
+    checks:
+      - id: "contracts_file"
+        description: "Inter-stage contracts file should exist"
+        type: "file_exists"
+        path: ".claude/skills/common/inter-stage-contracts.yaml"
+        blocking: false
+        warning_message: "Contracts file not found. Contract validation will be skipped."
+
+# Post-initialization validation
+post_init:
+  - id: "config_valid_yaml"
+    description: "Generated config.yaml is valid YAML"
+    type: "yaml_valid"
+    path: ".choisor/config.yaml"
+    blocking: true
+
+  - id: "project_valid_yaml"
+    description: "Generated project.yaml is valid YAML"
+    type: "yaml_valid"
+    path: ".choisor/project.yaml"
+    blocking: true
+
+  - id: "workflow_valid_yaml"
+    description: "Generated workflow.yaml is valid YAML"
+    type: "yaml_valid"
+    path: ".choisor/workflow.yaml"
+    blocking: true
+
+  - id: "tasks_json_valid"
+    description: "tasks.json is valid JSON"
+    type: "json_valid"
+    path: ".choisor/tasks/tasks.json"
+    blocking: true
+
+  - id: "sessions_json_valid"
+    description: "sessions.json is valid JSON"
+    type: "json_valid"
+    path: ".choisor/sessions/sessions.json"
+    blocking: true
+
+# Rollback rules
+rollback:
+  trigger_on:
+    - "post_init.config_valid_yaml.failed"
+    - "post_init.project_valid_yaml.failed"
+    - "post_init.workflow_valid_yaml.failed"
+
+  actions:
+    - type: "remove_directory"
+      path: ".choisor"
+      condition: "partial_creation"
+
+    - type: "log_error"
+      message: "Initialization failed. Rolled back changes."
+
+    - type: "suggest_resolution"
+      suggestions:
+        - "Check template syntax"
+        - "Verify input parameters"
+        - "Check filesystem permissions"

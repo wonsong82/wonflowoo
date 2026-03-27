@@ -1,0 +1,306 @@
+# Schema: interfaces/*.yaml, cross-domain-contracts.yaml
+# Skill: s3-02-preparation-interface-extraction
+# Stage: 3 - Preparation
+# Phase: 3.2 - Interface Extraction
+# Version: 1.0.0
+
+schema_info:
+  name: "interface-extraction"
+  version: "1.0.0"
+  skill_id: "s3-02-preparation-interface-extraction"
+  output_files:
+    - "interfaces/{interface-name}.yaml"
+    - "cross-domain-contracts.yaml"
+  output_path: "work/specs/stage3-outputs/phase2/"
+
+# =============================================================================
+# interfaces/{interface-name}.yaml 구조
+# =============================================================================
+interface_spec:
+  root:
+    required:
+      - metadata
+      - interface
+      - dtos
+    optional:
+      - exceptions
+      - migration_guide
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s3-02-preparation-interface-extraction"
+      - generated_at:
+          type: string
+          $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+      - cycle_id:
+          type: string
+          pattern: "^CYC-\\d{3}$"
+      - chain:
+          type: string
+
+  interface:
+    required:
+      - name:
+          type: string
+          pattern: "^[A-Z][a-zA-Z]+Provider$"
+      - package:
+          type: string
+          pattern: "^com\\.hallain\\."
+      - purpose:
+          type: string
+      - methods:
+          type: array
+    optional:
+      - breaks_dependency:
+          type: object
+      - implementation:
+          type: object
+
+  method_item:
+    required:
+      - name:
+          type: string
+      - parameters:
+          type: array
+      - return_type:
+          type: string
+    optional:
+      - description:
+          type: string
+      - throws:
+          type: array
+
+  dtos:
+    type: array
+    item:
+      $ref: "#/dto_item"
+
+  dto_item:
+    required:
+      - name:
+          type: string
+          pattern: "^[A-Z][a-zA-Z]+DTO$"
+      - package:
+          type: string
+      - fields:
+          type: array
+    optional:
+      - description:
+          type: string
+
+# =============================================================================
+# cross-domain-contracts.yaml 구조
+# =============================================================================
+cross_domain_contracts:
+  root:
+    required:
+      - metadata
+      - summary
+      - interfaces
+      - dtos
+    optional:
+      - dependency_inversion_map
+      - package_structure
+      - generation_ready
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s3-02-preparation-interface-extraction"
+      - generated_at:
+          type: string
+      - total_interfaces:
+          type: integer
+          minimum: 0
+      - total_dtos:
+          type: integer
+          minimum: 0
+
+  summary:
+    required:
+      - cycles_resolved:
+          type: integer
+      - interfaces_created:
+          type: integer
+      - dtos_created:
+          type: integer
+    optional:
+      - common_package:
+          type: string
+
+  interfaces:
+    type: array
+    item:
+      $ref: "#/interface_summary_item"
+
+  interface_summary_item:
+    required:
+      - name:
+          type: string
+      - file:
+          type: string
+      - cycle_id:
+          type: string
+      - breaks:
+          type: string
+    optional:
+      - methods_count:
+          type: integer
+      - dtos_count:
+          type: integer
+
+  dtos:
+    type: array
+    item:
+      $ref: "#/dto_summary_item"
+
+  dto_summary_item:
+    required:
+      - name:
+          type: string
+    optional:
+      - used_by:
+          type: array
+      - fields_count:
+          type: integer
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys_interface"
+      targets: ["metadata", "interface", "dtos"]
+      applies_to: "interfaces/*.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V002"
+      name: "required_keys_contracts"
+      targets: ["metadata", "summary", "interfaces", "dtos"]
+      applies_to: "cross-domain-contracts.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V003"
+      name: "generated_by_exact"
+      target: "metadata.generated_by"
+      expected: "s3-02-preparation-interface-extraction"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V004"
+      name: "interface_name_pattern"
+      target: "interface.name"
+      pattern: "^[A-Z][a-zA-Z]+Provider$"
+      description: "인터페이스명은 Pascal Case + Provider 접미사"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "dto_name_pattern"
+      target: "dtos[].name"
+      pattern: "^[A-Z][a-zA-Z]+DTO$"
+      description: "DTO명은 Pascal Case + DTO 접미사"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V006"
+      name: "package_pattern"
+      target: "interface.package"
+      pattern: "^com\\.hallain\\."
+      description: "패키지는 com.hallain으로 시작"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V007"
+      name: "cycle_id_pattern"
+      target: "metadata.cycle_id"
+      pattern: "^CYC-\\d{3}$"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V008"
+      name: "method_has_return_type"
+      target: "interface.methods[].return_type"
+      check: "exists and not empty"
+      on_fail: "ERROR"
+      blocking: true
+
+  metric:
+    - rule_id: "V009"
+      name: "all_chains_addressed"
+      description: "모든 interface_extraction 체인 처리"
+      check: "interfaces.length >= interface_extraction_cycles"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V010"
+      name: "dto_fields_complete"
+      description: "모든 DTO 필드 정의"
+      check: "every dto has fields.length > 0"
+      on_fail: "WARNING"
+      blocking: false
+
+# =============================================================================
+# 예시
+# =============================================================================
+valid_example_interface:
+  metadata:
+    generated_by: "s3-02-preparation-interface-extraction"
+    generated_at: "2026-01-08T14:30:00Z"
+    cycle_id: "CYC-001"
+    chain: "PA → MM → PA"
+
+  interface:
+    name: "ProductionPlanProvider"
+    package: "com.hallain.common.provider"
+    purpose: "PA 도메인의 생산계획 정보를 MM 도메인에 제공"
+    breaks_dependency:
+      from: "MM"
+      to: "PA"
+    methods:
+      - name: "getProductionPlan"
+        parameters:
+          - { name: "siteCd", type: "String" }
+          - { name: "yyyymm", type: "String" }
+        return_type: "List<ProductionPlanDTO>"
+
+  dtos:
+    - name: "ProductionPlanDTO"
+      package: "com.hallain.common.dto"
+      fields:
+        - { name: "planId", type: "String" }
+        - { name: "siteCd", type: "String" }
+        - { name: "totalQty", type: "BigDecimal" }
+
+valid_example_contracts:
+  metadata:
+    generated_by: "s3-02-preparation-interface-extraction"
+    generated_at: "2026-01-08T14:30:00Z"
+    total_interfaces: 2
+    total_dtos: 4
+
+  summary:
+    cycles_resolved: 2
+    interfaces_created: 2
+    dtos_created: 4
+    common_package: "com.hallain.common"
+
+  interfaces:
+    - name: "ProductionPlanProvider"
+      file: "interfaces/production-plan-provider.yaml"
+      cycle_id: "CYC-001"
+      breaks: "MM → PA"
+      methods_count: 2
+      dtos_count: 2
+
+  dtos:
+    - name: "ProductionPlanDTO"
+      used_by: ["ProductionPlanProvider"]
+      fields_count: 5

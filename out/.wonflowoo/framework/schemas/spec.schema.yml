@@ -1,0 +1,170 @@
+# Reference schema for one individual spec file (.wonflowoo/workspace/specs/{name}.yml)
+#
+# This is a human-readable template, not a machine-enforced JSON Schema.
+# Keep comments so authors understand intent and expected detail level.
+# Frontend specs use the same 4-layer model.
+# Interface types include: route, props, events, api_consumer.
+# Data stores include: zustand, local_state, redux.
+# See docs/CONCEPT.md (Frontend Specs) for the full example.
+
+# REQUIRED: Stable identifier for this spec unit (kebab-case recommended).
+name: your-unit-name
+
+# REQUIRED: Short description of what this unit does in production.
+description: One-paragraph summary of this module/feature/domain
+
+# REQUIRED: Which team/domain owns this feature (examples: backend, frontend, infrastructure).
+# This is different from task `category` — owner is permanent (who maintains this),
+# category is per-task (what kind of work, for model routing).
+owner: backend
+
+# REQUIRED: Actual source files represented by this spec.
+source_paths:
+  - src/path/to/file.ts
+  - src/path/to/other-file.ts
+
+# L1: INTERFACES — all inbound/outbound communication points.
+interfaces:
+  - # REQUIRED per interface: communication type.
+    type: rest # Examples: rest, graphql, grpc, pubsub, scheduler, websocket, file_io, http_client, route, events, api_consumer
+
+    # REQUIRED per interface: flow direction.
+    direction: inbound # Allowed pattern: inbound | outbound | bidirectional | internal
+
+    # REQUIRED per interface: implementation file owning this interface.
+    file: src/routes/example.routes.ts
+
+    # Type-specific fields (use what applies to your interface type):
+    endpoints: # Typical for rest/graphql-style interfaces
+      - path: /api/example
+        method: GET
+        auth: bearer
+        request: { id: string }
+        response: { ok: boolean }
+
+    services: # Typical for grpc
+      - name: ExampleService
+        methods: [GetExample]
+        proto: proto/example.proto
+
+    topics: # Typical for outbound pubsub
+      - name: example.created
+        payload: { id: string, timestamp: datetime }
+
+    subscriptions: # Typical for inbound pubsub
+      - topic: example.deleted
+        handler: handleExampleDeleted
+
+    jobs: # Typical for scheduler/internal interfaces
+      - name: reconcileExamples
+        schedule: "0 * * * *"
+        description: Reconcile examples hourly
+
+    calls: # Typical for outbound http_client/api_consumer
+      - name: callExternalExampleApi
+        target: external-service
+        method: POST
+        path: /v1/examples
+
+    channels: # Typical for websocket
+      - name: example-stream
+        events_in: [subscribe]
+        events_out: [example_update]
+
+    imports: # Typical for file_io inbound
+      - name: importExamples
+        format: CSV
+        source: S3
+        trigger: manual
+
+# L2: LOGIC — services + detailed behavior flows.
+logic:
+  # REQUIRED: narrative overview of module behavior.
+  description: |
+    Explain business logic, boundaries, and critical rules.
+
+  # REQUIRED: key services/components implementing this unit.
+  services:
+    - name: ExampleService
+      file: src/services/example.service.ts
+
+  # REQUIRED: map of flow_name -> flow object.
+  flows:
+    example_flow:
+      # REQUIRED: source file where this flow is primarily implemented.
+      file: src/services/example.service.ts
+
+      # REQUIRED: what event/request starts this flow.
+      trigger: POST /api/example
+
+      # REQUIRED: step-by-step behavior, including branches and side effects.
+      steps:
+        - Validate input payload
+        - Fetch related records from data store
+        - Apply business rule checks
+        - Persist updates
+        - Emit event and return response
+
+      # OPTIONAL but recommended when failures need explicit handling.
+      error_handling:
+        - Return 400 for invalid payload
+        - Return 404 when related record does not exist
+
+      # OPTIONAL but recommended for auth/privacy/threat controls.
+      security:
+        - Require authenticated caller with required role
+        - Redact sensitive fields in logs
+
+# L3: DATA — choose ONE pattern:
+#   A) stateless: true
+#   B) stores: [...]
+data:
+  # Use true only when unit has no owned/persisted state.
+  # If true, remove/omit stores.
+  stateless: false
+
+  # Use stores when the unit reads/writes state.
+  # If stores is present, set stateless to false or omit stateless.
+  stores:
+    - type: postgresql # Example store types: postgresql, mysql, mongodb, redis, s3, filesystem, sqlite, dynamodb
+      tables: # For relational stores
+        - name: examples
+          columns:
+            - { name: id, type: uuid, pk: true }
+            - { name: tenant_id, type: uuid, index: true }
+            - { name: created_at, type: timestamp }
+
+    - type: redis
+      usage: Short-lived caching and rate limits
+      keys:
+        - pattern: "example:{id}"
+          ttl: 300s
+
+    - type: mongodb
+      collections:
+        - name: example_documents
+          document_shape: { _id: objectId, status: string, payload: object }
+
+    - type: s3
+      buckets:
+        - name: example-exports
+          prefixes: [daily/, monthly/]
+
+# L4: DEPENDENCIES — internal graph + external packages/services.
+dependencies:
+  internal:
+    # Modules/specs this unit requires at runtime/build time.
+    depends_on:
+      - module: other-unit
+        usage: Reads profile details during request handling
+
+    # Modules/specs that require this unit.
+    depended_by:
+      - module: consuming-unit
+        usage: Calls this unit for validation before checkout
+
+  external:
+    - package: zod
+      usage: Request payload schema validation
+    - package: jsonwebtoken
+      usage: JWT generation and verification

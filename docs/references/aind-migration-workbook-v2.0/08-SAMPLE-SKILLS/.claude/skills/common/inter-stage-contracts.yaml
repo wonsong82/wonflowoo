@@ -1,0 +1,363 @@
+# Inter-Stage Data Contracts
+# Purpose: Stage 간 데이터 인터페이스 계약 정의
+# Version: 1.0.0
+# Created: 2026-01-08
+
+contract_info:
+  name: "inter-stage-contracts"
+  version: "1.0.0"
+  description: "Stage 간 데이터 흐름 및 호환성 규칙 정의"
+
+# =============================================================================
+# 1. Stage 1 내부 계약 (Phase 간)
+# =============================================================================
+stage1_internal:
+  # ---------------------------------------------------------------------------
+  # S1-01 → S1-02, S1-03
+  # ---------------------------------------------------------------------------
+  s1_01_to_s1_02:
+    name: "Feature Inventory → MiPlatform Protocol"
+    producer:
+      skill: "s1-01-discovery-feature-inventory"
+      output: "feature-inventory.yaml"
+      schema: "s1-01-feature-inventory.schema.yaml"
+    consumer:
+      skill: "s1-02-discovery-miplatform-protocol"
+    data_elements:
+      required:
+        - path: "features[].feature_id"
+          usage: "Feature 식별"
+        - path: "features[].screen_id"
+          usage: "Screen ID 기반 MiPlatform 패턴 분석"
+        - path: "features[].endpoints[].path"
+          usage: "엔드포인트별 프로토콜 분석"
+      optional:
+        - path: "features[].endpoints[].controller"
+    validation:
+      - "feature_id 형식: FEAT-{DOMAIN}-{NNN}"
+      - "screen_id 형식: {DOMAIN}{5자리숫자}"
+
+  s1_01_to_s1_03:
+    name: "Feature Inventory → Deep Analysis"
+    producer:
+      skill: "s1-01-discovery-feature-inventory"
+      output: "feature-inventory.yaml"
+    consumer:
+      skill: "s1-03-discovery-deep-analysis"
+    data_elements:
+      required:
+        - path: "features[].feature_id"
+        - path: "features[].screen_id"
+        - path: "features[].endpoints"
+        - path: "features[].controllers"
+
+  # ---------------------------------------------------------------------------
+  # S1-02 → S1-03
+  # ---------------------------------------------------------------------------
+  s1_02_to_s1_03:
+    name: "MiPlatform Protocol → Deep Analysis"
+    producer:
+      skill: "s1-02-discovery-miplatform-protocol"
+      output: "miplatform-protocol.yaml"
+    consumer:
+      skill: "s1-03-discovery-deep-analysis"
+    data_elements:
+      required:
+        - path: "protocols[].screen_id"
+        - path: "protocols[].request.datasets"
+        - path: "protocols[].response.datasets"
+      optional:
+        - path: "protocols[].variables"
+
+  # ---------------------------------------------------------------------------
+  # S1-03 → S1-04
+  # ---------------------------------------------------------------------------
+  s1_03_to_s1_04:
+    name: "Deep Analysis → Spec Generation"
+    producer:
+      skill: "s1-03-discovery-deep-analysis"
+      outputs:
+        - "summary.yaml"
+        - "api-endpoints/{feature_id}.yaml"
+        - "business-logic/{feature_id}.yaml"
+        - "data-access/{feature_id}.yaml"
+        - "sql-mybatis/{feature_id}.yaml"
+        - "data-model/{feature_id}.yaml"
+      schema: "s1-03-deep-analysis.schema.yaml"
+    consumer:
+      skill: "s1-04-discovery-spec-generation"
+    data_elements:
+      required:
+        - path: "metadata.feature_id"
+        - path: "metadata.screen_id"
+        - path: "overview.complexity"
+        - path: "layers.l1_api_endpoints"
+        - path: "layers.l2_business_logic"
+        - path: "layers.l3_data_access"
+        - path: "layers.l4_sql_mybatis"
+        - path: "layers.l5_data_model"
+    # Layer 변환 매핑: S1-03 → S1-04 (의도된 계층 재구성)
+    layer_transformation:
+      description: "S1-03의 5-Layer 분석 결과가 S1-04에서 Spec 형식으로 재구성됨"
+      mapping:
+        - source: "layers.l4_sql_mybatis + layers.l5_data_model"
+          target: "layers.l4_data_model"
+          note: "Entity + MyBatis Mapper Spec으로 통합"
+        - source: "(extracted from l4_sql_mybatis)"
+          target: "layers.l5_database"
+          note: "Tables, Stored Procedures로 분리"
+    validation:
+      - "5개 Layer 파일 모두 존재"
+      - "summary.yaml에 모든 Layer 참조 포함"
+
+# =============================================================================
+# 2. Stage 1 → Stage 2 계약
+# =============================================================================
+stage1_to_stage2:
+  # ---------------------------------------------------------------------------
+  # S1-04 → S2-02 (Spec vs Ground Truth 비교)
+  # ---------------------------------------------------------------------------
+  s1_04_to_s2_02:
+    name: "Spec Generation → Structural Comparison"
+    producer:
+      skill: "s1-04-discovery-spec-generation"
+      output: "main.yaml + subdirectories"
+      schema: "s1-04-main-spec.schema.yaml"
+    consumer:
+      skill: "s2-02-validation-structural-comparison"
+    data_elements:
+      required:
+        - path: "metadata.feature_id"
+        - path: "metadata.domain"
+        - path: "layers.l1_api_endpoints"
+        - path: "layers.l2_business_logic"
+        - path: "layers.l4_data_model"
+    normalization_required:
+      - element: "endpoint URL"
+        rule: "소문자 변환, trailing slash 제거, 확장자 제거"
+      - element: "class name"
+        rule: "패키지 제외, 클래스명만 비교"
+    notes:
+      - "S2-02는 S1-04 출력과 S2-01 출력을 모두 입력으로 받음"
+      - "정규화 규칙 적용 후 비교 수행"
+
+# =============================================================================
+# 3. Stage 2 내부 계약 (Phase 간)
+# =============================================================================
+stage2_internal:
+  # ---------------------------------------------------------------------------
+  # S2-01 (독립 생성 - 입력 없음)
+  # ---------------------------------------------------------------------------
+  s2_01_independence:
+    name: "Source Inventory Independence"
+    skill: "s2-01-validation-source-inventory"
+    constraints:
+      - type: "NO_REFERENCE"
+        target: "stage1-outputs"
+        description: "Stage 1 산출물 참조 금지"
+      - type: "NO_REFERENCE"
+        target: "FEAT-*"
+        description: "Feature ID 패턴 사용 금지"
+    outputs:
+      - "source-inventory.yaml"
+    independence_marker:
+      field: "metadata.independence_verified"
+      value: true
+
+  # ---------------------------------------------------------------------------
+  # S2-01 → S2-02
+  # ---------------------------------------------------------------------------
+  s2_01_to_s2_02:
+    name: "Source Inventory → Structural Comparison"
+    producer:
+      skill: "s2-01-validation-source-inventory"
+      output: "source-inventory.yaml"
+      schema: "s2-01-source-inventory.schema.yaml"
+    consumer:
+      skill: "s2-02-validation-structural-comparison"
+    data_elements:
+      required:
+        - path: "layers.controllers"
+        - path: "layers.services"
+        - path: "layers.daos"
+        - path: "layers.sql_statements"
+        - path: "layers.entities"
+    validation:
+      - "5개 Layer 배열 모두 존재"
+      - "independence_verified == true"
+
+  # ---------------------------------------------------------------------------
+  # S2-02 → S2-03
+  # ---------------------------------------------------------------------------
+  s2_02_to_s2_03:
+    name: "Structural Comparison → Gap Analysis"
+    producer:
+      skill: "s2-02-validation-structural-comparison"
+      outputs:
+        - "comparison-report.yaml"
+        - "coverage-matrix.yaml"
+      schema: "s2-02-comparison-report.schema.yaml"
+    consumer:
+      skill: "s2-03-validation-gap-analysis"
+    data_elements:
+      required:
+        - path: "summary.overall_coverage"
+        - path: "summary.result"
+        - path: "discrepancies"
+        - path: "forward_check.over_specifications"
+        - path: "backward_check.under_specifications"
+    validation:
+      - "overall_coverage 값 존재"
+      - "discrepancies 배열 존재 (빈 배열 가능)"
+
+  # ---------------------------------------------------------------------------
+  # S2-03 → S2-04
+  # ---------------------------------------------------------------------------
+  s2_03_to_s2_04:
+    name: "Gap Analysis → Spec Completion"
+    producer:
+      skill: "s2-03-validation-gap-analysis"
+      outputs:
+        - "gap-analysis.yaml"
+        - "gap-by-feature.yaml"
+    consumer:
+      skill: "s2-04-validation-spec-completion"
+    data_elements:
+      required:
+        - path: "gaps[].gap_id"
+        - path: "gaps[].severity"
+        - path: "gaps[].remediation_strategy"
+        - path: "gaps[].target_feature"
+
+# =============================================================================
+# 4. Stage 2 → Stage 3 계약
+# =============================================================================
+stage2_to_stage3:
+  s2_04_to_s3_01:
+    name: "Spec Completion → Dependency Graph"
+    producer:
+      skill: "s2-04-validation-spec-completion"
+      output: "완성된 main.yaml 파일들"
+    consumer:
+      skill: "s3-01-preparation-dependency-graph"
+    data_elements:
+      required:
+        - path: "metadata.feature_id"
+        - path: "dependencies.internal"
+        - path: "dependencies.external"
+    validation:
+      - "coverage >= 99%"
+      - "critical gaps = 0"
+
+# =============================================================================
+# 5. 정규화 규칙 (Normalization Rules)
+# =============================================================================
+normalization_rules:
+  endpoint_url:
+    description: "엔드포인트 URL 비교 시 정규화"
+    applies_to:
+      - "s1-01-discovery-feature-inventory"
+      - "s1-04-discovery-spec-generation"
+      - "s2-01-validation-source-inventory"
+      - "s2-02-validation-structural-comparison"
+    rules:
+      - step: 1
+        action: "lowercase"
+        example:
+          before: "/PA/PA01001/List"
+          after: "/pa/pa01001/list"
+      - step: 2
+        action: "remove_trailing_slash"
+        example:
+          before: "/pa/pa01001/list/"
+          after: "/pa/pa01001/list"
+      - step: 3
+        action: "remove_extension"
+        extensions: [".mi", ".do", ".action"]
+        example:
+          before: "/pa/pa01001/list.mi"
+          after: "/pa/pa01001/list"
+
+  class_name:
+    description: "클래스명 비교 시 정규화"
+    applies_to:
+      - "s2-02-validation-structural-comparison"
+    rules:
+      - step: 1
+        action: "remove_package"
+        example:
+          before: "com.hallain.pa.controller.PA01001Controller"
+          after: "PA01001Controller"
+
+  method_name:
+    description: "메서드명 비교"
+    applies_to:
+      - "s2-02-validation-structural-comparison"
+    rules:
+      - step: 1
+        action: "exact_match"
+        case_sensitive: true
+
+# =============================================================================
+# 6. 데이터 타입 호환성 매핑
+# =============================================================================
+type_compatibility:
+  s1_to_s2_mapping:
+    description: "S1 출력 → S2 입력 필드 매핑"
+    mappings:
+      - s1_field: "features[].endpoints[].path"
+        s2_field: "layers.controllers[].methods[].url"
+        normalization: "endpoint_url"
+
+      - s1_field: "features[].endpoints[].method"
+        s2_field: "layers.controllers[].methods[].http_method"
+        normalization: null
+        note: "정확히 일치해야 함 (GET, POST 등)"
+
+      - s1_field: "layers.l2_business_logic.services[].class"
+        s2_field: "layers.services[].implementation"
+        normalization: "class_name"
+
+      - s1_field: "layers.l4_data_model.entities[].class"
+        s2_field: "layers.entities[].class"
+        normalization: "class_name"
+
+# =============================================================================
+# 7. 계약 위반 처리
+# =============================================================================
+contract_violations:
+  severity_levels:
+    - level: "CRITICAL"
+      description: "데이터 구조 불일치로 다음 Phase 진행 불가"
+      action: "즉시 중단, 재생성 필요"
+      examples:
+        - "필수 필드 누락"
+        - "타입 불일치"
+        - "independence 위반"
+
+    - level: "MAJOR"
+      description: "일부 데이터 불일치, 다음 Phase 영향 있음"
+      action: "WARNING 로그, 수동 검토 필요"
+      examples:
+        - "정규화 규칙 미적용"
+        - "선택 필드 형식 오류"
+
+    - level: "MINOR"
+      description: "형식적 불일치, 다음 Phase 진행 가능"
+      action: "로그 기록, 계속 진행"
+      examples:
+        - "권장 필드 누락"
+        - "추가 필드 존재"
+
+  handling:
+    on_critical:
+      - "Gate 실패 처리"
+      - "violation-report.yaml 생성"
+      - "재생성 지시"
+    on_major:
+      - "WARNING 로그"
+      - "violation-report.yaml 생성"
+      - "수동 검토 대기"
+    on_minor:
+      - "INFO 로그"
+      - "계속 진행"

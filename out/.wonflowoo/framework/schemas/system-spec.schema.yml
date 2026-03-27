@@ -1,0 +1,66 @@
+# Reference schema for system spec (.wonflowoo/workspace/specs/_system.yml)
+#
+# This file is the always-loaded, compressed system map derived from
+# individual specs. Keep summaries concise but structurally complete.
+
+# REQUIRED: version of the WonfloWoo framework/spec format.
+framework_version: "1.0"
+
+# REQUIRED: high-level registry of all modules/specs.
+modules:
+  - name: auth # REQUIRED: unique module/spec name (matches individual spec name)
+    description: JWT authentication with refresh token rotation # REQUIRED
+    owner: backend # REQUIRED: owning category/team
+    interfaces_summary: # REQUIRED: compact interface inventory for fast routing
+      - rest (2 endpoints)
+      - pubsub (1 topic)
+    data_summary: # REQUIRED: compact data inventory for ownership/risk checks
+      - postgresql (users, refresh_tokens)
+      - redis (rate limiting)
+
+# REQUIRED: directed dependency map across modules/specs.
+dependency_graph:
+  auth:
+    depends_on:
+      - user-management
+    depended_by:
+      - rbac
+      - api-gateway
+
+# REQUIRED: canonical owner of durable/shared data entities.
+# Shape: store_type -> entity_name -> owning_module
+data_ownership:
+  postgresql:
+    users: auth
+    refresh_tokens: auth
+    user_profiles: user-management
+  redis:
+    rate_limiting: auth
+    session_cache: user-management
+
+# REQUIRED: cross-spec foreign-key-like relationships.
+# Keep each relationship as one explicit link for traceability.
+data_relationships:
+  - from: order-processing.orders.user_id → auth.users.id
+  - from: payment.payments.order_id → order-processing.orders.id
+
+# REQUIRED: functional grouping for planning/delegation context.
+# Shape: feature_name -> { description, specs }
+feature_groups:
+  checkout:
+    description: End-to-end checkout and payment completion
+    specs:
+      - checkout-page
+      - order-processing
+      - payment
+      - notification
+
+# REQUIRED: business flows that cross module boundaries.
+# Shape: flow_name -> ordered step list
+cross_module_flows:
+  place_order:
+    - order-processing: validate cart, create pending order
+    - payment: charge payment method
+    - order-processing: mark order confirmed
+    - inventory: decrement stock
+    - notification: send confirmation

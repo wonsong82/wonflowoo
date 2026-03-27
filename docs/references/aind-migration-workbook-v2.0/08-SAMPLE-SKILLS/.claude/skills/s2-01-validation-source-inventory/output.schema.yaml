@@ -1,0 +1,689 @@
+# Schema: source-inventory.yaml (Ground Truth)
+# Skill: s2-01-validation-source-inventory
+# Stage: 2 - Validation
+# Phase: 2.1 - Source Inventory
+# Version: 1.0.0
+
+schema_info:
+  name: "source-inventory"
+  version: "1.3.0"
+  skill_id: "s2-01-validation-source-inventory"
+  output_file: "source-inventory.yaml"
+  output_path: "work/specs/stage2-outputs/phase1/{Priority}/{Domain}/"
+  critical_constraint: "Stage 1 산출물 참조 금지 - 독립적 Ground Truth"
+  large_file_support:
+    threshold_kb: 200
+    chunked_directory: "source-inventory/"
+    manifest_file: "_manifest.yaml"
+
+# =============================================================================
+# 최상위 구조 정의
+# =============================================================================
+root:
+  required:
+    - metadata
+    - summary
+    - layers
+  optional:
+    - external_dependencies:
+        $ref: "#/external_dependencies"
+
+# =============================================================================
+# metadata 섹션
+# =============================================================================
+metadata:
+  description: "파일 메타데이터 (독립성 표시 포함)"
+  required:
+    - generated_by:
+        type: string
+        exact: "s2-01-validation-source-inventory"
+    - generated_at:
+        type: string
+        $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+    - domain:
+        type: string
+        $ref: "common-types.schema.yaml#/identifiers/domain_code"
+    - source_path:
+        type: string
+        description: "분석 대상 소스 경로"
+    - independence_verified:
+        type: boolean
+        exact: true
+        description: "Stage 1 미참조 확인 플래그"
+        validation_message: "반드시 true여야 함 - 독립성 보장"
+
+# =============================================================================
+# summary 섹션
+# =============================================================================
+summary:
+  description: "5-Layer 통계 요약"
+  required:
+    - total_controllers:
+        type: integer
+        minimum: 0
+    - total_services:
+        type: integer
+        minimum: 0
+    - total_daos:
+        type: integer
+        minimum: 0
+    - total_sql_statements:
+        type: integer
+        minimum: 0
+    - total_entities:
+        type: integer
+        minimum: 0
+  optional:
+    - by_layer:
+        type: object
+        description: "Layer별 상세 통계"
+        $ref: "#/by_layer_summary"
+
+by_layer_summary:
+  description: "Layer별 통계 상세"
+  optional:
+    - controller:
+        type: object
+        properties:
+          classes:
+            type: integer
+          methods:
+            type: integer
+    - service:
+        type: object
+        properties:
+          interfaces:
+            type: integer
+          implementations:
+            type: integer
+          methods:
+            type: integer
+    - dao:
+        type: object
+        properties:
+          classes:
+            type: integer
+          methods:
+            type: integer
+    - sql:
+        type: object
+        properties:
+          select:
+            type: integer
+          insert:
+            type: integer
+          update:
+            type: integer
+          delete:
+            type: integer
+    - entity:
+        type: object
+        properties:
+          vo:
+            type: integer
+          dto:
+            type: integer
+          entity:
+            type: integer
+
+# =============================================================================
+# layers 섹션 (5-Layer Ground Truth)
+# =============================================================================
+layers:
+  description: "5-Layer 소스 인벤토리"
+  required:
+    - controllers:
+        type: array
+        description: "Controller 클래스 목록"
+        item:
+          $ref: "#/controller_item"
+    - services:
+        type: array
+        description: "Service 클래스 목록"
+        item:
+          $ref: "#/service_item"
+    - daos:
+        type: array
+        description: "DAO/Mapper 클래스 목록"
+        item:
+          $ref: "#/dao_item"
+    - sql_statements:
+        type: array
+        description: "SQL 문 목록"
+        item:
+          $ref: "#/sql_item"
+    - entities:
+        type: array
+        description: "Entity/VO/DTO 클래스 목록"
+        item:
+          $ref: "#/entity_item"
+
+# =============================================================================
+# Layer 항목 정의
+# =============================================================================
+controller_item:
+  description: "단일 Controller 정보"
+  required:
+    - class:
+        type: string
+        $ref: "common-types.schema.yaml#/java_types/class_name"
+    - file:
+        type: string
+        description: "소스 파일 경로"
+    - methods:
+        type: array
+        min_items: 1
+        item:
+          required:
+            - name:
+                type: string
+                $ref: "common-types.schema.yaml#/java_types/method_name"
+            - http_method:
+                type: string
+                $ref: "common-types.schema.yaml#/api_types/http_method"
+            - url:
+                type: string
+                description: "엔드포인트 URL (원본 그대로)"
+
+service_item:
+  description: "단일 Service 정보"
+  required:
+    - interface:
+        type: string
+        $ref: "common-types.schema.yaml#/java_types/class_name"
+        nullable: true
+        description: "인터페이스명 (없으면 null)"
+    - implementation:
+        type: string
+        $ref: "common-types.schema.yaml#/java_types/class_name"
+    - file:
+        type: string
+    - methods:
+        type: array
+        item:
+          required:
+            - name:
+                type: string
+                $ref: "common-types.schema.yaml#/java_types/method_name"
+          optional:
+            - return_type:
+                type: string
+            - parameters:
+                type: array
+                description: "메서드 파라미터 목록"
+                item:
+                  required:
+                    - name:
+                        type: string
+                    - type:
+                        type: string
+            - signature:
+                type: string
+                description: "전체 메서드 시그니처 (예: List<VO> getList(SearchVO))"
+            - annotations:
+                type: array
+                description: "메서드 레벨 어노테이션 (예: @Transactional)"
+                item:
+                  type: string
+  optional:
+    - class_annotations:
+        type: array
+        description: "클래스 레벨 어노테이션 (예: @Service, @Transactional)"
+        item:
+          type: string
+
+dao_item:
+  description: "단일 DAO/Mapper 정보"
+  required:
+    - class:
+        type: string
+        $ref: "common-types.schema.yaml#/java_types/class_name"
+    - file:
+        type: string
+    - methods:
+        type: array
+        item:
+          required:
+            - name:
+                type: string
+  optional:
+    - mapper_xml:
+        type: string
+        description: "연결된 XML 매퍼 파일 경로"
+
+sql_item:
+  description: "단일 SQL 문 정보"
+  required:
+    - namespace:
+        type: string
+        description: "MyBatis namespace"
+    - xml_file:
+        type: string
+    - statements:
+        type: array
+        item:
+          required:
+            - id:
+                type: string
+            - type:
+                type: string
+                $ref: "common-types.schema.yaml#/database_types/sql_operation"
+          optional:
+            - result_type:
+                type: string
+
+entity_item:
+  description: "단일 Entity/VO/DTO 정보"
+  required:
+    - class:
+        type: string
+        $ref: "common-types.schema.yaml#/java_types/class_name"
+    - type:
+        type: string
+        enum: ["VO", "DTO", "Entity"]
+    - file:
+        type: string
+  optional:
+    - fields:
+        type: array
+        item:
+          required:
+            - name:
+                type: string
+                $ref: "common-types.schema.yaml#/java_types/field_name"
+            - type:
+                type: string
+                description: "필드 타입 (필수)"
+          optional:
+            - java_type:
+                type: string
+                description: "Fully Qualified Name (예: java.lang.String)"
+
+# =============================================================================
+# external_dependencies 섹션 (신규)
+# =============================================================================
+external_dependencies:
+  description: "외부 연동 목록 (DB Link, Stored Procedure, External API)"
+  optional:
+    - db_links:
+        type: array
+        description: "DB Link 목록"
+        item:
+          required:
+            - name:
+                type: string
+                description: "DB Link 이름 (예: TO_EPPROD_EAM)"
+          optional:
+            - used_in:
+                type: array
+                description: "사용처 목록 (MapperName.statementId)"
+                item:
+                  type: string
+    - stored_procedures:
+        type: array
+        description: "Stored Procedure/Function 목록"
+        item:
+          required:
+            - package:
+                type: string
+                description: "패키지명"
+            - function:
+                type: string
+                description: "함수/프로시저명"
+          optional:
+            - called_from:
+                type: array
+                description: "호출처 목록"
+                item:
+                  type: string
+    - external_apis:
+        type: array
+        description: "외부 API 호출 목록"
+        item:
+          required:
+            - url:
+                type: string
+            - method:
+                type: string
+                enum: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+          optional:
+            - called_from:
+                type: array
+                item:
+                  type: string
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys"
+      targets: ["metadata", "summary", "layers"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V002"
+      name: "five_layers_present"
+      description: "5개 Layer 배열 모두 존재"
+      targets:
+        - "layers.controllers"
+        - "layers.services"
+        - "layers.daos"
+        - "layers.sql_statements"
+        - "layers.entities"
+      on_fail: "ERROR"
+      blocking: true
+
+  independence:
+    - rule_id: "V003"
+      name: "independence_flag"
+      description: "independence_verified 플래그 true"
+      target: "metadata.independence_verified"
+      expected: true
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V004"
+      name: "no_stage1_reference"
+      description: "Stage 1 경로 참조 없음"
+      check: "NOT contains 'stage1-outputs' in any field"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "no_feature_id_usage"
+      description: "Feature ID 사용 안 함"
+      check: "NOT contains 'FEAT-' pattern"
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V006"
+      name: "generated_by_exact"
+      target: "metadata.generated_by"
+      expected: "s2-01-validation-source-inventory"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V007"
+      name: "http_method_valid"
+      target: "layers.controllers[].methods[].http_method"
+      enum: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V008"
+      name: "sql_type_valid"
+      target: "layers.sql_statements[].statements[].type"
+      enum: ["SELECT", "INSERT", "UPDATE", "DELETE", "CALL"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V009"
+      name: "entity_type_valid"
+      target: "layers.entities[].type"
+      enum: ["VO", "DTO", "Entity"]
+      on_fail: "ERROR"
+      blocking: true
+
+  metric:
+    - rule_id: "V010"
+      name: "controller_count_consistency"
+      check: "summary.total_controllers == len(layers.controllers)"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V011"
+      name: "service_count_consistency"
+      check: "summary.total_services == len(layers.services)"
+      on_fail: "WARNING"
+      blocking: false
+
+# =============================================================================
+# 예시
+# =============================================================================
+valid_example:
+  metadata:
+    generated_by: "s2-01-validation-source-inventory"
+    generated_at: "2026-01-08T10:30:00Z"
+    domain: "PA"
+    source_path: "hallain/src/main/java/com/hallain/pa/"
+    independence_verified: true
+
+  summary:
+    total_controllers: 2
+    total_services: 2
+    total_daos: 2
+    total_sql_statements: 4
+    total_entities: 3
+    by_layer:
+      controller:
+        classes: 2
+        methods: 6
+      service:
+        interfaces: 2
+        implementations: 2
+        methods: 6
+      dao:
+        classes: 2
+        methods: 6
+      sql:
+        select: 4
+        insert: 2
+        update: 2
+        delete: 2
+      entity:
+        vo: 2
+        dto: 1
+        entity: 0
+
+  layers:
+    controllers:
+      - class: "PA01001Controller"
+        file: "src/main/java/com/hallain/pa/controller/PA01001Controller.java"
+        methods:
+          - name: "getList"
+            http_method: "POST"
+            url: "/pa/PA01001/list"
+          - name: "getDetail"
+            http_method: "POST"
+            url: "/pa/PA01001/detail"
+          - name: "save"
+            http_method: "POST"
+            url: "/pa/PA01001/save"
+
+    services:
+      - interface: "PA01001Service"
+        implementation: "PA01001ServiceImpl"
+        file: "src/main/java/com/hallain/pa/service/impl/PA01001ServiceImpl.java"
+        class_annotations:
+          - "@Service"
+          - "@Transactional(readOnly=true)"
+        methods:
+          - name: "getList"
+            return_type: "List<PA01001VO>"
+            parameters:
+              - name: "searchVO"
+                type: "PA01001SearchVO"
+            signature: "List<PA01001VO> getList(PA01001SearchVO)"
+            annotations: []
+          - name: "getDetail"
+            return_type: "PA01001VO"
+            parameters:
+              - name: "planId"
+                type: "String"
+            signature: "PA01001VO getDetail(String)"
+            annotations: []
+          - name: "save"
+            return_type: "int"
+            parameters:
+              - name: "vo"
+                type: "PA01001VO"
+            signature: "int save(PA01001VO)"
+            annotations:
+              - "@Transactional"
+
+    daos:
+      - class: "PA01001Dao"
+        file: "src/main/java/com/hallain/pa/dao/PA01001Dao.java"
+        mapper_xml: "src/main/resources/mapper/pa/PA01001Mapper.xml"
+        methods:
+          - name: "selectList"
+          - name: "selectDetail"
+          - name: "insert"
+          - name: "update"
+
+    sql_statements:
+      - namespace: "com.hallain.pa.dao.PA01001Dao"
+        xml_file: "src/main/resources/mapper/pa/PA01001Mapper.xml"
+        statements:
+          - id: "selectList"
+            type: "SELECT"
+            result_type: "PA01001VO"
+          - id: "selectDetail"
+            type: "SELECT"
+            result_type: "PA01001VO"
+          - id: "insert"
+            type: "INSERT"
+          - id: "update"
+            type: "UPDATE"
+
+    entities:
+      - class: "PA01001VO"
+        type: "VO"
+        file: "src/main/java/com/hallain/pa/vo/PA01001VO.java"
+        fields:
+          - name: "planId"
+            type: "String"
+            java_type: "java.lang.String"
+          - name: "planName"
+            type: "String"
+            java_type: "java.lang.String"
+          - name: "siteCd"
+            type: "String"
+            java_type: "java.lang.String"
+
+  external_dependencies:
+    db_links: []
+    stored_procedures: []
+    external_apis: []
+
+# =============================================================================
+# Chunked Output Schema (v1.3.0) - Large File Support
+# =============================================================================
+# 256KB Read Tool 제한 대응을 위한 분할 저장 스키마
+
+chunked_output:
+  description: "200KB 이상 출력 시 Layer별 분할 저장"
+  threshold_kb: 200
+
+  directory_structure:
+    base: "source-inventory/"
+    files:
+      - "_manifest.yaml"
+      - "controllers.yaml"
+      - "services.yaml"
+      - "daos.yaml"
+      - "sql_statements.yaml"
+      - "entities.yaml"
+      - "external_deps.yaml"
+
+# =============================================================================
+# Manifest Schema (_manifest.yaml)
+# =============================================================================
+manifest_schema:
+  description: "분할 저장 시 인덱스 파일"
+  required:
+    - metadata
+    - summary
+    - chunks
+
+  metadata:
+    description: "파일 메타데이터 (chunked 플래그 포함)"
+    required:
+      - generated_by:
+          type: string
+          exact: "s2-01-validation-source-inventory"
+      - generated_at:
+          type: string
+          format: "iso8601_datetime"
+      - domain:
+          type: string
+      - source_path:
+          type: string
+      - independence_verified:
+          type: boolean
+          exact: true
+      - chunked:
+          type: boolean
+          exact: true
+          description: "분할 저장 표시"
+      - chunk_version:
+          type: string
+          exact: "1.0"
+
+  summary:
+    description: "전체 통계 요약 (기존 summary와 동일)"
+    $ref: "#/summary"
+
+  chunks:
+    description: "청크 파일 목록"
+    type: array
+    item:
+      required:
+        - name:
+            type: string
+            enum: ["controllers", "services", "daos", "sql_statements", "entities", "external_dependencies"]
+        - file:
+            type: string
+            description: "청크 파일명"
+        - item_count:
+            type: integer
+            minimum: 0
+      optional:
+        - size_kb:
+            type: integer
+            maximum: 200
+            description: "파일 크기 (KB)"
+
+# =============================================================================
+# Chunk File Schema (각 Layer 파일)
+# =============================================================================
+chunk_file_schema:
+  description: "개별 Layer 청크 파일"
+  header_comment: |
+    # Chunk: {layer_name}
+    # Parent: source-inventory/_manifest.yaml
+    # Generated: {timestamp}
+
+  content:
+    type: object
+    description: "해당 Layer의 배열 데이터만 포함"
+    example:
+      controllers:
+        $ref: "#/layers/controllers"
+
+# =============================================================================
+# Reading Strategy for Chunked Files
+# =============================================================================
+reading_strategy:
+  description: "후속 스킬(s2-02 등)이 분할 파일을 읽는 방법"
+
+  detection:
+    step_1: "source-inventory/ 디렉토리 존재 확인"
+    step_2: "_manifest.yaml 존재 확인"
+    if_chunked: "manifest.chunks[] 순회하며 각 파일 읽기"
+    if_single: "source-inventory.yaml 직접 읽기"
+
+  legacy_support:
+    description: "기존 단일 대용량 파일 읽기 지원"
+    method: "offset/limit 파라미터 사용"
+    chunk_lines: 1500
+    process: |
+      1. 파일 크기 확인 (wc -c)
+      2. 200KB 미만이면 전체 Read
+      3. 200KB 이상이면 offset/limit으로 청크 읽기:
+         - Read(file, offset=0, limit=1500)
+         - Read(file, offset=1500, limit=1500)
+         - ... 파일 끝까지 반복

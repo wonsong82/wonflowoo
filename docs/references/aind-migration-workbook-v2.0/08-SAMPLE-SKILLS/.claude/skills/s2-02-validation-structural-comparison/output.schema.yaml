@@ -1,0 +1,512 @@
+# Schema: comparison-report.yaml & coverage-matrix.yaml
+# Skill: s2-02-validation-structural-comparison
+# Stage: 2 - Validation
+# Phase: 2.2 - Structural Comparison
+# Version: 1.0.0
+
+schema_info:
+  name: "comparison-report"
+  version: "1.0.0"
+  skill_id: "s2-02-validation-structural-comparison"
+  output_files:
+    - "comparison-report.yaml"
+    - "coverage-matrix.yaml"
+  output_path: "work/specs/stage2-outputs/phase2/{Priority}/{Domain}/"
+
+# =============================================================================
+# comparison-report.yaml 구조
+# =============================================================================
+comparison_report:
+  root:
+    required:
+      - metadata
+      - summary
+      - forward_check
+      - backward_check
+      - by_dimension
+    optional:
+      - discrepancies
+
+  # ---------------------------------------------------------------------------
+  # metadata 섹션
+  # ---------------------------------------------------------------------------
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s2-02-validation-structural-comparison"
+      - generated_at:
+          type: string
+          $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+      - domain:
+          type: string
+          $ref: "common-types.schema.yaml#/identifiers/domain_code"
+      - sources:
+          type: object
+          required:
+            - spec:
+                type: string
+                description: "Stage 1 Spec 경로"
+            - ground_truth:
+                type: string
+                description: "Ground Truth 경로"
+
+  # ---------------------------------------------------------------------------
+  # summary 섹션
+  # ---------------------------------------------------------------------------
+  summary:
+    required:
+      - overall_coverage:
+          type: number
+          $ref: "common-types.schema.yaml#/formats/percentage"
+          description: "전체 커버리지 (%)"
+      - forward_coverage:
+          type: number
+          $ref: "common-types.schema.yaml#/formats/percentage"
+          description: "Forward 커버리지 (Spec → Source)"
+      - backward_coverage:
+          type: number
+          $ref: "common-types.schema.yaml#/formats/percentage"
+          description: "Backward 커버리지 (Source → Spec)"
+      - total_spec_items:
+          type: integer
+          minimum: 0
+      - total_source_items:
+          type: integer
+          minimum: 0
+      - matched_items:
+          type: integer
+          minimum: 0
+      - mismatched_items:
+          type: integer
+          minimum: 0
+      - result:
+          type: string
+          $ref: "common-types.schema.yaml#/severity_types/validation_result"
+          description: "PASS / WARNING / FAIL"
+
+  # ---------------------------------------------------------------------------
+  # forward_check 섹션 (Spec → Source)
+  # ---------------------------------------------------------------------------
+  forward_check:
+    required:
+      - coverage:
+          type: number
+          $ref: "common-types.schema.yaml#/formats/percentage"
+      - total_items:
+          type: integer
+      - matched:
+          type: integer
+      - missing_in_source:
+          type: integer
+          description: "Source에 없는 Spec 항목 수"
+    optional:
+      - over_specifications:
+          type: array
+          description: "Source에 없는 Spec 항목 목록"
+          item:
+            $ref: "#/discrepancy_item"
+
+  # ---------------------------------------------------------------------------
+  # backward_check 섹션 (Source → Spec)
+  # ---------------------------------------------------------------------------
+  backward_check:
+    required:
+      - coverage:
+          type: number
+          $ref: "common-types.schema.yaml#/formats/percentage"
+      - total_items:
+          type: integer
+      - matched:
+          type: integer
+      - missing_in_spec:
+          type: integer
+          description: "Spec에 없는 Source 항목 수"
+    optional:
+      - under_specifications:
+          type: array
+          description: "Spec에 없는 Source 항목 목록"
+          item:
+            $ref: "#/discrepancy_item"
+
+  # ---------------------------------------------------------------------------
+  # by_dimension 섹션
+  # ---------------------------------------------------------------------------
+  by_dimension:
+    required:
+      - endpoints:
+          type: object
+          $ref: "#/dimension_stat"
+      - services:
+          type: object
+          $ref: "#/dimension_stat"
+      - sql:
+          type: object
+          $ref: "#/dimension_stat"
+      - entities:
+          type: object
+          $ref: "#/dimension_stat"
+
+  dimension_stat:
+    required:
+      - forward_coverage:
+          type: number
+          $ref: "common-types.schema.yaml#/formats/percentage"
+      - backward_coverage:
+          type: number
+          $ref: "common-types.schema.yaml#/formats/percentage"
+      - mismatches:
+          type: integer
+
+  # ---------------------------------------------------------------------------
+  # discrepancies 섹션
+  # ---------------------------------------------------------------------------
+  discrepancies:
+    type: array
+    item:
+      $ref: "#/discrepancy_detail"
+
+  discrepancy_item:
+    required:
+      - item:
+          type: string
+          description: "불일치 항목명"
+      - type:
+          type: string
+          enum: ["endpoint", "service", "sql", "entity"]
+    optional:
+      - spec_location:
+          type: string
+      - source_location:
+          type: string
+      - reason:
+          type: string
+
+  discrepancy_detail:
+    required:
+      - id:
+          type: string
+          pattern: "^DISC-\\d{3}$"
+          description: "불일치 ID (예: DISC-001)"
+      - type:
+          type: string
+          enum: ["missing_in_spec", "missing_in_source", "mismatch"]
+      - dimension:
+          type: string
+          enum: ["endpoint", "service", "sql", "entity"]
+      - severity:
+          type: string
+          $ref: "common-types.schema.yaml#/severity_types/gap_severity"
+    optional:
+      - source_item:
+          type: string
+      - spec_item:
+          type: string
+      - source_file:
+          type: string
+      - source_line:
+          type: integer
+
+# =============================================================================
+# coverage-matrix.yaml 구조
+# =============================================================================
+coverage_matrix:
+  root:
+    required:
+      - metadata
+      - matrix
+      - gate_evaluation
+
+  # ---------------------------------------------------------------------------
+  # metadata 섹션
+  # ---------------------------------------------------------------------------
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s2-02-validation-structural-comparison"
+      - generated_at:
+          type: string
+          $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+      - domain:
+          type: string
+          $ref: "common-types.schema.yaml#/identifiers/domain_code"
+
+  # ---------------------------------------------------------------------------
+  # matrix 섹션
+  # ---------------------------------------------------------------------------
+  matrix:
+    required:
+      - dimensions:
+          type: array
+          min_items: 4
+          item:
+            $ref: "#/matrix_dimension"
+      - totals:
+          type: object
+          $ref: "#/matrix_totals"
+
+  matrix_dimension:
+    required:
+      - dimension:
+          type: string
+          enum: ["endpoint", "service", "sql", "entity"]
+      - weight:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: "가중치 (합계 = 1.0)"
+      - spec_count:
+          type: integer
+      - source_count:
+          type: integer
+      - matched_count:
+          type: integer
+      - forward_coverage:
+          type: number
+          $ref: "common-types.schema.yaml#/formats/percentage"
+      - backward_coverage:
+          type: number
+          $ref: "common-types.schema.yaml#/formats/percentage"
+      - weighted_score:
+          type: number
+          description: "가중치 적용 점수"
+
+  matrix_totals:
+    required:
+      - overall_score:
+          type: number
+          $ref: "common-types.schema.yaml#/formats/percentage"
+      - forward_average:
+          type: number
+          $ref: "common-types.schema.yaml#/formats/percentage"
+      - backward_average:
+          type: number
+          $ref: "common-types.schema.yaml#/formats/percentage"
+      - total_mismatches:
+          type: integer
+
+  # ---------------------------------------------------------------------------
+  # gate_evaluation 섹션
+  # ---------------------------------------------------------------------------
+  gate_evaluation:
+    required:
+      - threshold:
+          type: number
+          $ref: "common-types.schema.yaml#/formats/percentage"
+          description: "Gate 통과 기준 (%)"
+      - actual_score:
+          type: number
+          $ref: "common-types.schema.yaml#/formats/percentage"
+      - result:
+          type: string
+          $ref: "common-types.schema.yaml#/severity_types/validation_result"
+      - margin:
+          type: number
+          description: "기준과의 차이 (actual - threshold)"
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys_comparison"
+      targets: ["metadata", "summary", "forward_check", "backward_check", "by_dimension"]
+      applies_to: "comparison-report.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V002"
+      name: "required_keys_matrix"
+      targets: ["metadata", "matrix", "gate_evaluation"]
+      applies_to: "coverage-matrix.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V003"
+      name: "generated_by_exact"
+      target: "metadata.generated_by"
+      expected: "s2-02-validation-structural-comparison"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V004"
+      name: "result_enum_valid"
+      target: "summary.result"
+      enum: ["PASS", "WARNING", "FAIL"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "dimension_enum_valid"
+      target: "matrix.dimensions[].dimension"
+      enum: ["endpoint", "service", "sql", "entity"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V006"
+      name: "weight_sum_valid"
+      description: "가중치 합계가 1.0"
+      check: "sum(matrix.dimensions[].weight) == 1.0"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V007"
+      name: "coverage_range_valid"
+      description: "커버리지 0-100 범위"
+      targets:
+        - "summary.overall_coverage"
+        - "summary.forward_coverage"
+        - "summary.backward_coverage"
+      range: [0, 100]
+      on_fail: "ERROR"
+      blocking: true
+
+  metric:
+    - rule_id: "V008"
+      name: "mismatch_consistency"
+      check: "summary.mismatched_items == summary.total_spec_items + summary.total_source_items - (2 * summary.matched_items)"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V009"
+      name: "gate_result_consistency"
+      description: "gate_evaluation.result와 threshold 비교 일치"
+      check: |
+        if actual_score >= threshold: result == "PASS"
+        elif actual_score >= threshold - 5: result == "WARNING"
+        else: result == "FAIL"
+      on_fail: "WARNING"
+      blocking: false
+
+# =============================================================================
+# 예시 (comparison-report.yaml)
+# =============================================================================
+valid_example_comparison_report:
+  metadata:
+    generated_by: "s2-02-validation-structural-comparison"
+    generated_at: "2026-01-08T11:00:00Z"
+    domain: "PA"
+    sources:
+      spec: "work/specs/stage1-outputs/phase4/P2/PA/"
+      ground_truth: "work/specs/stage2-outputs/phase1/P2/PA/source-inventory.yaml"
+
+  summary:
+    overall_coverage: 96.5
+    forward_coverage: 98.2
+    backward_coverage: 94.8
+    total_spec_items: 100
+    total_source_items: 105
+    matched_items: 97
+    mismatched_items: 8
+    result: "PASS"
+
+  forward_check:
+    coverage: 98.2
+    total_items: 100
+    matched: 98
+    missing_in_source: 2
+    over_specifications:
+      - item: "PA01099Controller.getArchiveList"
+        type: "endpoint"
+        spec_location: "api-specs/openapi-spec.yaml:line 234"
+        reason: "Controller not found in source"
+
+  backward_check:
+    coverage: 94.8
+    total_items: 105
+    matched: 99
+    missing_in_spec: 6
+    under_specifications:
+      - item: "PA01005Controller.getLegacyReport"
+        type: "endpoint"
+        source_location: "PA01005Controller.java:line 45"
+        reason: "Endpoint not documented in spec"
+
+  by_dimension:
+    endpoints:
+      forward_coverage: 97.5
+      backward_coverage: 93.2
+      mismatches: 4
+    services:
+      forward_coverage: 98.0
+      backward_coverage: 95.1
+      mismatches: 2
+    sql:
+      forward_coverage: 99.1
+      backward_coverage: 96.3
+      mismatches: 1
+    entities:
+      forward_coverage: 98.8
+      backward_coverage: 94.2
+      mismatches: 1
+
+  discrepancies:
+    - id: "DISC-001"
+      type: "missing_in_spec"
+      dimension: "endpoint"
+      source_item: "PA01005Controller.getLegacyReport"
+      source_file: "PA01005Controller.java"
+      source_line: 45
+      severity: "major"
+
+# =============================================================================
+# 예시 (coverage-matrix.yaml)
+# =============================================================================
+valid_example_coverage_matrix:
+  metadata:
+    generated_by: "s2-02-validation-structural-comparison"
+    generated_at: "2026-01-08T11:00:00Z"
+    domain: "PA"
+
+  matrix:
+    dimensions:
+      - dimension: "endpoint"
+        weight: 0.30
+        spec_count: 50
+        source_count: 55
+        matched_count: 48
+        forward_coverage: 96.0
+        backward_coverage: 87.3
+        weighted_score: 27.5
+
+      - dimension: "service"
+        weight: 0.25
+        spec_count: 30
+        source_count: 32
+        matched_count: 29
+        forward_coverage: 96.7
+        backward_coverage: 90.6
+        weighted_score: 23.4
+
+      - dimension: "sql"
+        weight: 0.25
+        spec_count: 40
+        source_count: 42
+        matched_count: 39
+        forward_coverage: 97.5
+        backward_coverage: 92.9
+        weighted_score: 23.8
+
+      - dimension: "entity"
+        weight: 0.20
+        spec_count: 25
+        source_count: 28
+        matched_count: 24
+        forward_coverage: 96.0
+        backward_coverage: 85.7
+        weighted_score: 18.2
+
+    totals:
+      overall_score: 92.9
+      forward_average: 96.6
+      backward_average: 89.1
+      total_mismatches: 8
+
+  gate_evaluation:
+    threshold: 95.0
+    actual_score: 92.9
+    result: "WARNING"
+    margin: -2.1

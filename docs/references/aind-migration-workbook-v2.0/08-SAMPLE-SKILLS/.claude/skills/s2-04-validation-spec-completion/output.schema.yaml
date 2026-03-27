@@ -1,0 +1,322 @@
+# Schema: remediation-report.yaml & validation-result.yaml
+# Skill: s2-04-validation-spec-completion
+# Stage: 2 - Validation
+# Phase: 2.4 - Spec Completion
+# Version: 1.0.0
+
+schema_info:
+  name: "spec-completion"
+  version: "1.0.0"
+  skill_id: "s2-04-validation-spec-completion"
+  output_files:
+    - "remediation-log.yaml"
+    - "validation-result.yaml"
+    - "main.yaml (completed)"
+  output_path: "work/specs/stage2-outputs/phase4/{Priority}/{Domain}/FEAT-{DOMAIN}-{NNN}/"
+
+# =============================================================================
+# remediation-log.yaml 구조
+# =============================================================================
+remediation_log:
+  root:
+    required:
+      - metadata
+      - summary
+      - remediation_entries
+    optional: []
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s2-04-validation-spec-completion"
+      - generated_at:
+          type: string
+          $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+      - feature_id:
+          type: string
+          $ref: "common-types.schema.yaml#/identifiers/feature_id"
+      - domain:
+          type: string
+          $ref: "common-types.schema.yaml#/identifiers/domain_code"
+
+  summary:
+    required:
+      - total_gaps_processed:
+          type: integer
+          minimum: 0
+      - actions_taken:
+          type: object
+      - files_modified:
+          type: integer
+          minimum: 0
+      - validation_passed:
+          type: boolean
+
+  remediation_entries:
+    type: array
+    item:
+      $ref: "#/remediation_entry"
+
+  remediation_entry:
+    required:
+      - id:
+          type: string
+          pattern: "^REM-\\d{3}$"
+      - gap_id:
+          type: string
+          pattern: "^GAP-[A-Z]{2,3}-\\d{3}$"
+      - timestamp:
+          type: string
+      - action:
+          type: string
+          enum: ["add_to_spec", "correct_spec", "normalize_spec", "remove_from_spec", "defer", "false_positive_mark"]
+      - severity:
+          type: string
+          enum: ["critical", "major", "minor", "false_positive"]
+      - verified:
+          type: boolean
+    optional:
+      - before:
+          type: object
+      - after:
+          type: object
+      - changes:
+          type: array
+      - source_reference:
+          type: object
+      - reason:
+          type: string
+
+# =============================================================================
+# validation-result.yaml 구조
+# =============================================================================
+validation_result:
+  root:
+    required:
+      - metadata
+      - validation_summary
+      - metrics
+      - gate_evaluation
+    optional:
+      - score_breakdown
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s2-04-validation-spec-completion"
+      - generated_at:
+          type: string
+      - feature_id:
+          type: string
+      - domain:
+          type: string
+
+  validation_summary:
+    required:
+      - coverage:
+          type: number
+          $ref: "common-types.schema.yaml#/formats/percentage"
+      - validation_score:
+          type: number
+          minimum: 0
+          maximum: 100
+      - result:
+          type: string
+          enum: ["PASS", "CONDITIONAL_PASS", "FAIL"]
+
+  metrics:
+    required:
+      - before_remediation:
+          type: object
+      - after_remediation:
+          type: object
+    optional:
+      - improvement:
+          type: object
+
+  gate_evaluation:
+    required:
+      - gate_id:
+          type: string
+          exact: "G2.4"
+      - tier:
+          type: string
+          exact: "validation_gate"
+      - criteria:
+          type: array
+      - overall_result:
+          type: string
+          enum: ["PASS", "CONDITIONAL_PASS", "FAIL"]
+    optional:
+      - advance_to:
+          type: string
+
+# =============================================================================
+# completed main.yaml 추가 필드
+# =============================================================================
+completed_main:
+  additional_required:
+    - validation:
+        type: object
+        required:
+          - coverage:
+              type: number
+          - validation_score:
+              type: number
+          - critical_gaps:
+              type: integer
+          - remediated_gaps:
+              type: integer
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys_remediation"
+      targets: ["metadata", "summary", "remediation_entries"]
+      applies_to: "remediation-log.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V002"
+      name: "required_keys_validation"
+      targets: ["metadata", "validation_summary", "metrics", "gate_evaluation"]
+      applies_to: "validation-result.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V003"
+      name: "generated_by_exact"
+      target: "metadata.generated_by"
+      expected: "s2-04-validation-spec-completion"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V004"
+      name: "action_enum_valid"
+      target: "remediation_entries[].action"
+      enum: ["add_to_spec", "correct_spec", "normalize_spec", "remove_from_spec", "defer", "false_positive_mark"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "result_enum_valid"
+      target: "validation_summary.result"
+      enum: ["PASS", "CONDITIONAL_PASS", "FAIL"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V006"
+      name: "gate_id_exact"
+      target: "gate_evaluation.gate_id"
+      expected: "G2.4"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V007"
+      name: "coverage_range"
+      target: "validation_summary.coverage"
+      range: [0, 100]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V008"
+      name: "score_range"
+      target: "validation_summary.validation_score"
+      range: [0, 100]
+      on_fail: "ERROR"
+      blocking: true
+
+  metric:
+    - rule_id: "V009"
+      name: "coverage_threshold"
+      description: "PASS 시 coverage >= 99%"
+      check: "if result == 'PASS' then coverage >= 99"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V010"
+      name: "critical_zero_for_pass"
+      description: "PASS 시 critical_gaps == 0"
+      check: "if result == 'PASS' then critical_gaps == 0"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V011"
+      name: "all_remediation_verified"
+      description: "모든 remediation entry에 verified 존재"
+      check: "every entry has verified == true"
+      on_fail: "WARNING"
+      blocking: false
+
+# =============================================================================
+# 예시
+# =============================================================================
+valid_example_remediation_log:
+  metadata:
+    generated_by: "s2-04-validation-spec-completion"
+    generated_at: "2026-01-08T13:30:00Z"
+    feature_id: "FEAT-PA-001"
+    domain: "PA"
+
+  summary:
+    total_gaps_processed: 4
+    actions_taken:
+      add_to_spec: 2
+      correct_spec: 1
+      defer: 1
+    files_modified: 3
+    validation_passed: true
+
+  remediation_entries:
+    - id: "REM-001"
+      gap_id: "GAP-PA-001"
+      timestamp: "2026-01-08T13:00:00Z"
+      action: "add_to_spec"
+      severity: "major"
+      before:
+        state: "missing"
+      after:
+        state: "added"
+        location: "api-specs/openapi-spec.yaml:line 45"
+      verified: true
+
+valid_example_validation_result:
+  metadata:
+    generated_by: "s2-04-validation-spec-completion"
+    generated_at: "2026-01-08T13:30:00Z"
+    feature_id: "FEAT-PA-001"
+    domain: "PA"
+
+  validation_summary:
+    coverage: 99.2
+    validation_score: 92
+    result: "PASS"
+
+  metrics:
+    before_remediation:
+      coverage: 94.8
+      critical_gaps: 0
+      major_gaps: 2
+    after_remediation:
+      coverage: 99.2
+      critical_gaps: 0
+      major_gaps: 0
+
+  gate_evaluation:
+    gate_id: "G2.4"
+    tier: "validation_gate"
+    criteria:
+      - check: "coverage >= 99%"
+        actual: 99.2
+        result: "PASS"
+      - check: "critical_gaps == 0"
+        actual: 0
+        result: "PASS"
+    overall_result: "PASS"
+    advance_to: "Stage 3"

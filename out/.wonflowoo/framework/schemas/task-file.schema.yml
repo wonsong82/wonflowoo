@@ -1,0 +1,81 @@
+# Reference schema for one task instruction file (.wonflowoo/workspace/tasks/{task-id}-{origin}.{task-name}.yml)
+#
+# Task files are self-contained technical user stories.
+# Include key architecture detail inline so a developer can start cold.
+# Developer implementation plans are persisted alongside task files as:
+# {task-id}-{origin}.{task-name}.plan.md (e.g., 00001-inventory-system.setup-auth.plan.md)
+# Origin = plan name | bugfix | adhoc
+
+# REQUIRED: short action-oriented task title.
+task: Setup authentication middleware
+
+# REQUIRED: informational wave number from orchestrator plan.
+wave: 1
+
+# REQUIRED: orchestrator-managed lifecycle state.
+status: pending # pending | in_progress | completed | blocked
+
+# Reference to the plan that generated this task (if any)
+# Bugfixes and adhoc tasks may not have a plan_ref
+plan_ref: "00001-inventory-system"
+
+# REQUIRED: category used for model routing.
+category: backend
+
+# REQUIRED: why this task exists + architecture detail needed to execute.
+context: |
+  Explain the business/technical reason this task exists, where it fits in the
+  plan, and critical architecture constraints.
+
+  Inline important details so the developer does not need to infer intent:
+  - key conventions
+  - relevant error shape/contracts
+  - key schema excerpt(s)
+  - major ADR rationale
+
+# REQUIRED: concrete build brief (what to implement).
+brief: |
+  Describe expected behavior, main constraints, and implementation boundaries.
+  Include enough detail that acceptance criteria are achievable without guesswork.
+
+# OPTIONAL but strongly recommended: architecture docs for deeper context.
+architecture_refs:
+  - architecture/tech-stack.yml
+  - architecture/conventions.yml
+  - architecture/system-design.md
+
+# OPTIONAL but strongly recommended: specs the developer should load.
+spec_refs:
+  - specs/auth.yml
+  - specs/user-management.yml
+
+# OPTIONAL: ADR references for non-obvious historical decisions.
+adr_refs:
+  - architecture/decisions/001-auth-approach.md
+
+# REQUIRED: explicit guardrails of what must be done.
+must_do:
+  - Follow middleware conventions from architecture/conventions.yml
+  - Support both cookie and header token delivery
+  - Return standard error response shape on auth failures
+
+# REQUIRED: explicit out-of-scope boundaries.
+must_not_do:
+  - Do not implement user registration in this task
+  - Do not change existing users table schema
+
+# REQUIRED: verifiable completion conditions.
+acceptance_criteria:
+  - Protected endpoints require valid access token
+  - Public endpoints remain accessible without token
+  - Refresh token rotation invalidates old token on use
+  - Relevant specs updated to reflect implemented behavior
+
+# OPTIONAL: prerequisite tasks (by task file id/name).
+depends_on:
+  - 00001.project-scaffolding
+
+# OPTIONAL: tasks unblocked by completion of this task.
+blocks:
+  - 00003.user-mgmt
+  - 00004.add-roles-table

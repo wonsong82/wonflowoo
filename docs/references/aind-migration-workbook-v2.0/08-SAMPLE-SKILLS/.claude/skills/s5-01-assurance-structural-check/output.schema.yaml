@@ -1,0 +1,242 @@
+# Schema: structural-report.yaml
+# Skill: s5-01-assurance-structural-check
+# Stage: 5 - Assurance
+# Phase: 5.1 - Structural Check
+# Version: 1.0.0
+
+schema_info:
+  name: "structural-check"
+  version: "1.0.0"
+  skill_id: "s5-01-assurance-structural-check"
+  output_files:
+    - "structural-report.yaml"
+  output_path: "work/specs/stage5-outputs/phase1/"
+
+# =============================================================================
+# structural-report.yaml 구조
+# =============================================================================
+structural_report:
+  root:
+    required:
+      - metadata
+      - summary
+      - by_domain
+      - gate_evaluation
+    optional:
+      - violations
+      - auto_remediated
+      - checkstyle_report
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s5-01-assurance-structural-check"
+      - generated_at:
+          type: string
+          $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+      - architecture_reference:
+          type: string
+      - generation_rules_reference:
+          type: string
+
+  summary:
+    required:
+      - total_files:
+          type: integer
+          minimum: 0
+      - total_violations:
+          type: integer
+          minimum: 0
+      - by_category:
+          type: object
+      - compliance_rate:
+          type: number
+          minimum: 0
+          maximum: 100
+      - result:
+          type: string
+          enum: ["PASS", "CONDITIONAL", "FAIL"]
+
+  by_domain:
+    type: object
+    each:
+      required:
+        - files:
+            type: integer
+        - violations:
+            type: integer
+        - compliance_rate:
+            type: number
+
+  violations:
+    type: array
+    item:
+      required:
+        - id:
+            type: string
+            pattern: "^STRUCT-\\d{3}$"
+        - category:
+            type: string
+            enum: ["package_structure", "naming_convention", "annotation_usage", "import_organization", "code_style"]
+        - severity:
+            type: string
+            enum: ["error", "warning", "info"]
+        - file:
+            type: string
+        - line:
+            type: integer
+        - message:
+            type: string
+      optional:
+        - auto_fixable:
+            type: boolean
+        - remediated:
+            type: boolean
+
+  gate_evaluation:
+    required:
+      - gate_id:
+          type: string
+          exact: "G5.1"
+      - result:
+          type: string
+          enum: ["PASS", "CONDITIONAL", "FAIL"]
+      - criteria:
+          type: array
+    optional:
+      - blocking_violations:
+          type: integer
+      - advance_to:
+          type: string
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys"
+      targets: ["metadata", "summary", "by_domain", "gate_evaluation"]
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V002"
+      name: "generated_by_exact"
+      target: "metadata.generated_by"
+      expected: "s5-01-assurance-structural-check"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V003"
+      name: "result_enum_valid"
+      target: "summary.result"
+      enum: ["PASS", "CONDITIONAL", "FAIL"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V004"
+      name: "category_enum_valid"
+      target: "violations[].category"
+      enum: ["package_structure", "naming_convention", "annotation_usage", "import_organization", "code_style"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "severity_enum_valid"
+      target: "violations[].severity"
+      enum: ["error", "warning", "info"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V006"
+      name: "gate_id_exact"
+      target: "gate_evaluation.gate_id"
+      expected: "G5.1"
+      on_fail: "ERROR"
+      blocking: true
+
+  metric:
+    - rule_id: "V007"
+      name: "compliance_rate_range"
+      target: "summary.compliance_rate"
+      range: [0, 100]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V008"
+      name: "violations_count_consistency"
+      description: "violations.length == summary.total_violations"
+      check: "violations.length == total_violations"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V009"
+      name: "pass_criteria_check"
+      description: "PASS 시 compliance_rate >= 95%"
+      check: "if result == 'PASS' then compliance_rate >= 95"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V010"
+      name: "domain_sum_consistency"
+      description: "도메인별 violations 합계 == total_violations"
+      check: "sum(by_domain.*.violations) == total_violations"
+      on_fail: "WARNING"
+      blocking: false
+
+# =============================================================================
+# 예시
+# =============================================================================
+valid_example:
+  metadata:
+    generated_by: "s5-01-assurance-structural-check"
+    generated_at: "2026-01-08T18:00:00Z"
+    architecture_reference: "work/specs/stage3-outputs/phase4/architecture-design.yaml"
+    generation_rules_reference: "work/specs/stage3-outputs/phase5/generation-rules.yaml"
+
+  summary:
+    total_files: 4200
+    total_violations: 15
+    by_category:
+      package_structure: 2
+      naming_convention: 5
+      annotation_usage: 3
+      import_organization: 5
+      code_style: 0
+    compliance_rate: 99.6
+    result: "PASS"
+
+  by_domain:
+    PA:
+      files: 2000
+      violations: 8
+      compliance_rate: 99.6
+    MM:
+      files: 1200
+      violations: 4
+      compliance_rate: 99.7
+
+  violations:
+    - id: "STRUCT-001"
+      category: "naming_convention"
+      severity: "warning"
+      file: "PA01001Controller.java"
+      line: 15
+      message: "Method name should start with lowercase"
+      auto_fixable: true
+      remediated: true
+
+  gate_evaluation:
+    gate_id: "G5.1"
+    result: "PASS"
+    criteria:
+      - check: "compliance_rate >= 95%"
+        actual: 99.6
+        result: "PASS"
+      - check: "no_error_violations"
+        actual: true
+        result: "PASS"
+    blocking_violations: 0
+    advance_to: "S5-02"

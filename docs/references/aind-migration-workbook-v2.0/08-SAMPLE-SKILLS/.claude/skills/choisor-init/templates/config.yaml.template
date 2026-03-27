@@ -1,0 +1,72 @@
+# ============================================================================
+# Choisor Configuration Template (Runtime Settings)
+# ============================================================================
+# Variables: {{name}}, {{provider}}, {{max_sessions}}
+#
+# This file contains RUNTIME/OPERATIONAL settings only.
+# Project properties go in project.yaml.
+
+# Assignment control
+assignment:
+  enabled: true           # true: normal assignment, false: pause new assignments
+  delay: null             # minutes delay, 0 or null: normal
+  stale_timeout: 10       # minutes: inactive session stale threshold
+
+# Auto-commit settings
+auto_commit:
+  enabled: true
+  commit_on_completion: true
+
+# Limit Monitor control
+limit_monitor:
+  ignore_limit: true      # true: ignore limit detection (reduce false positives)
+
+# Daemon configuration
+daemon:
+  refresh_interval: 10    # seconds (5-300)
+
+# Provider settings
+provider: "{{provider}}"
+default_model: "claude-opus-4-5-20251101"
+
+# Claude Code session configuration
+claude_code:
+  max_sessions: {{max_sessions}}
+  max_output_tokens: 65536
+  default_model: "claude-opus-4-5-20251101"
+  default_model_bedrock: "global.anthropic.claude-opus-4-5-20251101-v1:0"
+
+# Current workflow position (runtime state)
+current:
+  stage: "stage1"
+  phase: "phase1"
+
+# Phase Gate settings (runtime control)
+phase_gate:
+  max_allowed_phase: "{{max_allowed_phase}}"
+  auto_to_max: true
+
+# Parallel execution settings
+parallel:
+  enabled: true
+  pairs:
+    - ["s4-03", "s4-04"]  # Code gen + test gen
+  max_parallel_sessions: 10
+
+# Path configurations (operational paths only)
+paths:
+  skills_root: ".claude/skills"
+  contracts_path: ".claude/skills/common/inter-stage-contracts.yaml"
+
+# Work scope filtering (runtime filter)
+work_scope:
+  enabled_domains: null   # ["pa", "mm"] or null for all
+  enabled_stages: null    # [1, 2, 3] or null for all
+
+# Priority algorithm (runtime)
+priority:
+  algorithm: "weighted_score"  # "weighted_score" | "fifo"
+  weights:
+    dependency_ready: 0.5
+    priority_score: 0.3
+    estimated_duration: 0.2

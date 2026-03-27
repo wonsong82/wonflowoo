@@ -1,0 +1,467 @@
+# Schema: main.yaml (Feature Specification)
+# Skill: s1-04-discovery-spec-generation
+# Stage: 1 - Discovery
+# Phase: 1.4 - Spec Generation
+# Version: 1.0.0
+
+schema_info:
+  name: "main-spec"
+  version: "1.0.0"
+  skill_id: "s1-04-discovery-spec-generation"
+  output_file: "main.yaml"
+  output_path: "work/specs/stage1-outputs/phase4/{Priority}/{Domain}/FEAT-{DOMAIN}-{NNN}/"
+  additional_outputs:
+    - "api-specs/openapi-spec.yaml"
+    - "api-specs/dto-definitions.yaml"
+    - "api-specs/error-responses.yaml"
+    - "business-logic/service-spec.yaml"
+    - "business-logic/validation-spec.yaml"
+    - "business-logic/business-rules.yaml"
+    - "data-model/entity-spec.yaml"
+    - "data-model/mybatis-mapper-spec.yaml"
+  constraints:
+    min_size_bytes: 500
+    max_lines: 1000
+
+# =============================================================================
+# 최상위 구조 정의
+# =============================================================================
+root:
+  required:
+    - metadata
+    - overview
+    - feature_classification
+    - layers
+  optional:
+    - dependencies
+    - technical_notes
+    - generation_hints
+
+# =============================================================================
+# metadata 섹션
+# =============================================================================
+metadata:
+  description: "파일 메타데이터"
+  required:
+    - generated_by:
+        type: string
+        exact: "s1-04-discovery-spec-generation"
+    - generated_at:
+        type: string
+        $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+    - domain:
+        type: string
+        $ref: "common-types.schema.yaml#/identifiers/domain_code"
+    - feature_id:
+        type: string
+        $ref: "common-types.schema.yaml#/identifiers/feature_id"
+    - screen_id:
+        type: string
+        $ref: "common-types.schema.yaml#/identifiers/screen_id"
+    - priority:
+        type: string
+        $ref: "common-types.schema.yaml#/identifiers/priority_code"
+  optional:
+    - source_phase:
+        type: string
+        description: "소스 Phase (예: S1-P1.3)"
+
+# =============================================================================
+# overview 섹션
+# =============================================================================
+overview:
+  description: "Feature 요약 정보"
+  required:
+    - name:
+        type: string
+        description: "Feature 명칭"
+    - complexity:
+        type: string
+        $ref: "common-types.schema.yaml#/severity_types/complexity"
+  optional:
+    - description:
+        type: string
+    - migration_effort:
+        type: string
+        description: "예상 스토리 포인트"
+        pattern: "^\\d+-\\d+|\\d+\\+$"
+        examples: ["1-3", "4-7", "8+"]
+
+# =============================================================================
+# feature_classification 섹션
+# =============================================================================
+feature_classification:
+  description: "Feature 분류 정보"
+  required:
+    - category:
+        type: string
+        enum:
+          - "CRUD"
+          - "Search"
+          - "Process"
+          - "Report"
+          - "Integration"
+          - "Batch"
+        description: "Feature 카테고리"
+  optional:
+    - patterns:
+        type: array
+        description: "Feature 구현 패턴 (자유 형식 - 코드 생성 힌트 용도)"
+        item:
+          type: string
+        examples:
+          - "Master-Detail"
+          - "List-Search"
+          - "Batch-Processing"
+          - "Tree-Structure"
+          - "Simple-Insert"
+          - "Simple-Query"
+          - "Approval-Workflow"
+          - "Multi-Controller"
+          - "File-Upload"
+    - mi_enabled:
+        type: boolean
+        description: "MiPlatform 사용 여부"
+    - requires_transaction:
+        type: boolean
+    - requires_pagination:
+        type: boolean
+
+# =============================================================================
+# layers 섹션 (5-Layer 구조)
+# =============================================================================
+layers:
+  description: "5-Layer Specification 참조"
+  required:
+    - l1_api_endpoints:
+        type: object
+        $ref: "#/layer_spec"
+    - l2_business_logic:
+        type: object
+        $ref: "#/layer_spec"
+    - l3_data_access:
+        type: object
+        $ref: "#/layer_spec_embedded"
+    - l4_data_model:
+        type: object
+        $ref: "#/layer_spec"
+    - l5_database:
+        type: object
+        $ref: "#/layer_spec_embedded"
+
+layer_spec:
+  description: "Layer Spec 참조 (외부 파일)"
+  required:
+    - directory:
+        type: string
+        description: "Spec 파일 디렉토리"
+    - files:
+        type: array
+        min_items: 1
+        item:
+          type: string
+  optional:
+    - summary:
+        type: object
+
+layer_spec_embedded:
+  description: "Layer Spec (main.yaml에 포함)"
+  required:
+    - embedded:
+        type: boolean
+        exact: true
+    - summary:
+        type: object
+
+# =============================================================================
+# dependencies 섹션
+# =============================================================================
+dependencies:
+  description: "의존성 정보"
+  optional:
+    - internal:
+        type: array
+        item:
+          required:
+            - from:
+                type: string
+            - to:
+                type: string
+            - type:
+                type: string
+                enum: ["injection", "call", "extends", "implements"]
+    - external:
+        type: array
+        item:
+          required:
+            - domain:
+                type: string
+                $ref: "common-types.schema.yaml#/identifiers/domain_code"
+            - service:
+                type: string
+            - methods:
+                type: array
+                item:
+                  type: string
+          optional:
+            - reason:
+                type: string
+
+# =============================================================================
+# technical_notes 섹션
+# =============================================================================
+technical_notes:
+  description: "기술적 주의사항"
+  optional:
+    - migration_warnings:
+        type: array
+        item:
+          required:
+            - type:
+                type: string
+                enum: ["WARNING", "INFO", "CRITICAL"]
+            - layer:
+                type: string
+                $ref: "common-types.schema.yaml#/layer_types/layer_code"
+            - description:
+                type: string
+          optional:
+            - code:
+                type: string
+    - special_handling:
+        type: array
+        item:
+          required:
+            - type:
+                type: string
+            - description:
+                type: string
+
+# =============================================================================
+# generation_hints 섹션
+# =============================================================================
+generation_hints:
+  description: "코드 생성 힌트 (S4에서 사용)"
+  optional:
+    - controller:
+        type: object
+        properties:
+          base_class:
+            type: string
+            nullable: true
+          annotations:
+            type: array
+            item:
+              type: string
+    - service:
+        type: object
+        properties:
+          base_class:
+            type: string
+            nullable: true
+          annotations:
+            type: array
+            item:
+              type: string
+    - repository:
+        type: object
+        properties:
+          base_class:
+            type: string
+            nullable: true
+          annotations:
+            type: array
+            item:
+              type: string
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys"
+      targets: ["metadata", "overview", "feature_classification", "layers"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V002"
+      name: "min_file_size"
+      description: "main.yaml >= 500 bytes"
+      check: "file_size >= 500"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V003"
+      name: "required_directories"
+      description: "필수 디렉토리 존재"
+      targets:
+        - "api-specs/"
+        - "business-logic/"
+        - "data-model/"
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V004"
+      name: "generated_by_exact"
+      target: "metadata.generated_by"
+      expected: "s1-04-discovery-spec-generation"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "feature_id_pattern"
+      target: "metadata.feature_id"
+      pattern: "^FEAT-[A-Z]{2,3}-\\d{3}$"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V006"
+      name: "priority_code_valid"
+      target: "metadata.priority"
+      enum: ["P0", "P1", "P2", "P3"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V007"
+      name: "category_valid"
+      target: "feature_classification.category"
+      enum: ["CRUD", "Search", "Process", "Report", "Integration", "Batch"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V008"
+      name: "five_layers_present"
+      description: "5개 Layer 모두 존재"
+      targets:
+        - "layers.l1_api_endpoints"
+        - "layers.l2_business_logic"
+        - "layers.l3_data_access"
+        - "layers.l4_data_model"
+        - "layers.l5_database"
+      on_fail: "ERROR"
+      blocking: true
+
+  cross_reference:
+    - rule_id: "V009"
+      name: "layer_files_exist"
+      description: "layers.*.files의 파일이 실제 존재"
+      check: "all files in layers.*.files exist"
+      on_fail: "WARNING"
+      blocking: false
+
+# =============================================================================
+# 예시
+# =============================================================================
+valid_example:
+  metadata:
+    generated_by: "s1-04-discovery-spec-generation"
+    generated_at: "2026-01-08T10:30:00Z"
+    domain: "PA"
+    feature_id: "FEAT-PA-001"
+    screen_id: "PA01001"
+    priority: "P2"
+    source_phase: "S1-P1.3"
+
+  overview:
+    name: "생산계획 조회"
+    description: "생산계획 목록/상세 조회 및 저장 기능"
+    complexity: "medium"
+    migration_effort: "4-7"
+
+  feature_classification:
+    category: "CRUD"
+    patterns:
+      - "Master-Detail"
+      - "List-Search"
+    mi_enabled: true
+    requires_transaction: true
+    requires_pagination: true
+
+  layers:
+    l1_api_endpoints:
+      directory: "api-specs/"
+      files:
+        - "openapi-spec.yaml"
+        - "dto-definitions.yaml"
+        - "error-responses.yaml"
+      summary:
+        total_endpoints: 3
+        by_method:
+          POST: 3
+
+    l2_business_logic:
+      directory: "business-logic/"
+      files:
+        - "service-spec.yaml"
+        - "validation-spec.yaml"
+        - "business-rules.yaml"
+      summary:
+        services: 1
+        methods: 5
+        transactional_methods: 2
+
+    l3_data_access:
+      embedded: true
+      summary:
+        repositories: 1
+        mapper_statements: 5
+
+    l4_data_model:
+      directory: "data-model/"
+      files:
+        - "entity-spec.yaml"
+        - "mybatis-mapper-spec.yaml"
+      summary:
+        entities: 2
+        total_fields: 15
+
+    l5_database:
+      embedded: true
+      summary:
+        tables: ["TB_PROD_PLAN", "TB_PROD_PLAN_DTL"]
+        stored_procedures: []
+
+  dependencies:
+    internal:
+      - from: "PA01001Controller"
+        to: "PA01001Service"
+        type: "injection"
+      - from: "PA01001Service"
+        to: "PA01001Repository"
+        type: "injection"
+    external:
+      - domain: "CM"
+        service: "CommonCodeService"
+        methods: ["getCodeList"]
+        reason: "공통코드 조회"
+
+  technical_notes:
+    migration_warnings:
+      - type: "INFO"
+        layer: "L2"
+        description: "트랜잭션 경계 명확"
+    special_handling:
+      - type: "MiPlatform"
+        description: "MiHandler → REST API 변환"
+      - type: "Pagination"
+        description: "ROWNUM → PageHelper"
+
+  generation_hints:
+    controller:
+      base_class: "BaseController"
+      annotations:
+        - "@RestController"
+        - "@RequestMapping(\"/api/pa/pa01001\")"
+    service:
+      base_class: null
+      annotations:
+        - "@Service"
+        - "@RequiredArgsConstructor"
+        - "@Transactional"
+    repository:
+      base_class: null
+      annotations:
+        - "@Repository"
+        - "@Mapper"

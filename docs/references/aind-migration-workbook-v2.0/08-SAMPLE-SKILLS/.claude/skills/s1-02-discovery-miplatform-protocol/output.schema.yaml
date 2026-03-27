@@ -1,0 +1,300 @@
+# Schema: miplatform-protocol.yaml
+# Skill: s1-02-discovery-miplatform-protocol
+# Stage: 1 - Discovery
+# Phase: 1.2 - MiPlatform Protocol Analysis
+# Version: 1.0.0
+
+schema_info:
+  name: "miplatform-protocol"
+  version: "1.0.0"
+  skill_id: "s1-02-discovery-miplatform-protocol"
+  output_file: "miplatform-protocol.yaml"
+  output_path: "work/specs/stage1-outputs/phase2/{Priority}/{Domain}/"
+
+# =============================================================================
+# 최상위 구조 정의
+# =============================================================================
+root:
+  required:
+    - metadata
+    - summary
+    - protocols
+  optional: []
+
+# =============================================================================
+# metadata 섹션
+# =============================================================================
+metadata:
+  description: "파일 메타데이터"
+  required:
+    - generated_by:
+        type: string
+        exact: "s1-02-discovery-miplatform-protocol"
+    - generated_at:
+        type: string
+        $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+    - domain:
+        type: string
+        $ref: "common-types.schema.yaml#/identifiers/domain_code"
+    - source_path:
+        type: string
+        description: "분석 대상 소스 경로"
+
+# =============================================================================
+# summary 섹션
+# =============================================================================
+summary:
+  description: "MiPlatform 엔드포인트 통계"
+  required:
+    - total_endpoints:
+        type: integer
+        minimum: 0
+    - miplatform_endpoints:
+        type: integer
+        minimum: 0
+    - coverage:
+        type: string
+        pattern: "^\\d+(\\.\\d+)?%$"
+        description: "MiPlatform 엔드포인트 비율 (예: 95.3%)"
+  optional:
+    - by_pattern:
+        type: object
+        properties:
+          with_dataset:
+            type: integer
+          variables_only:
+            type: integer
+          dynamic_schema:
+            type: integer
+
+# =============================================================================
+# protocols 섹션
+# =============================================================================
+protocols:
+  description: "엔드포인트별 프로토콜 정의"
+  type: array
+  min_items: 1
+  item:
+    $ref: "#/protocol_item"
+
+protocol_item:
+  description: "단일 프로토콜 정의"
+  required:
+    - endpoint_path:
+        type: string
+        description: "엔드포인트 URL 경로"
+    - http_method:
+        type: string
+        $ref: "common-types.schema.yaml#/api_types/http_method"
+    - controller:
+        type: string
+        $ref: "common-types.schema.yaml#/java_types/class_name"
+    - method_name:
+        type: string
+        $ref: "common-types.schema.yaml#/java_types/method_name"
+    - request:
+        type: object
+        $ref: "#/request_schema"
+    - response:
+        type: object
+        $ref: "#/response_schema"
+
+# =============================================================================
+# Request/Response 스키마
+# =============================================================================
+request_schema:
+  description: "Request 스키마"
+  required:
+    - datasets:
+        type: array
+        item:
+          $ref: "#/dataset_schema"
+    - variables:
+        type: array
+        item:
+          $ref: "#/variable_schema"
+
+response_schema:
+  description: "Response 스키마"
+  required:
+    - datasets:
+        type: array
+        item:
+          $ref: "#/dataset_schema"
+    - variables:
+        type: array
+        item:
+          $ref: "#/variable_schema"
+
+dataset_schema:
+  description: "Dataset 정의"
+  required:
+    - name:
+        type: string
+        description: "Dataset 이름 (예: ds_master)"
+    - vo_class:
+        type: string
+        $ref: "common-types.schema.yaml#/java_types/class_name"
+  optional:
+    - schema:
+        type: string
+        enum: ["COMPLETE", "INCOMPLETE", "DYNAMIC"]
+        default: "COMPLETE"
+    - is_list:
+        type: boolean
+        default: false
+    - columns:
+        type: array
+        item:
+          $ref: "#/column_schema"
+
+column_schema:
+  description: "Dataset 컬럼 정의"
+  required:
+    - name:
+        type: string
+    - type:
+        type: string
+        enum: ["STRING", "INTEGER", "LONG", "DOUBLE", "DECIMAL", "DATE", "BLOB"]
+  optional:
+    - size:
+        type: integer
+    - note:
+        type: string
+
+variable_schema:
+  description: "Variable 정의"
+  required:
+    - name:
+        type: string
+        description: "변수명"
+    - type:
+        type: string
+        enum: ["STRING", "INTEGER", "LONG", "DOUBLE", "BOOLEAN"]
+  optional:
+    - standard:
+        type: boolean
+        description: "MiPlatform 표준 변수 여부 (ErrorCode, COMM_* 등)"
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys"
+      targets: ["metadata", "summary", "protocols"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V002"
+      name: "yaml_syntax"
+      description: "YAML 파싱 오류 없음"
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V003"
+      name: "generated_by_exact"
+      target: "metadata.generated_by"
+      expected: "s1-02-discovery-miplatform-protocol"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V004"
+      name: "http_method_valid"
+      target: "protocols[].http_method"
+      enum: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "coverage_format"
+      target: "summary.coverage"
+      pattern: "^\\d+(\\.\\d+)?%$"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V006"
+      name: "schema_status_valid"
+      target: "protocols[].request.datasets[].schema"
+      enum: ["COMPLETE", "INCOMPLETE", "DYNAMIC"]
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V007"
+      name: "column_type_valid"
+      target: "protocols[].request.datasets[].columns[].type"
+      enum: ["STRING", "INTEGER", "LONG", "DOUBLE", "DECIMAL", "DATE", "BLOB"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V008"
+      name: "variable_type_valid"
+      target: "protocols[].request.variables[].type"
+      enum: ["STRING", "INTEGER", "LONG", "DOUBLE", "BOOLEAN"]
+      on_fail: "ERROR"
+      blocking: true
+
+  metric:
+    - rule_id: "V009"
+      name: "endpoint_coverage_threshold"
+      description: "MiPlatform 엔드포인트 커버리지 95% 이상"
+      check: "miplatform_endpoints / total_endpoints >= 0.95"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V010"
+      name: "protocols_non_empty"
+      description: "protocols 배열에 최소 1개 이상 항목"
+      check: "len(protocols) >= 1"
+      on_fail: "ERROR"
+      blocking: true
+
+# =============================================================================
+# 예시
+# =============================================================================
+valid_example:
+  metadata:
+    generated_by: "s1-02-discovery-miplatform-protocol"
+    generated_at: "2026-01-08T10:30:00Z"
+    domain: "PA"
+    source_path: "hallain/src/main/java/com/hallain/pa/"
+
+  summary:
+    total_endpoints: 150
+    miplatform_endpoints: 143
+    coverage: "95.3%"
+    by_pattern:
+      with_dataset: 120
+      variables_only: 23
+      dynamic_schema: 7
+
+  protocols:
+    - endpoint_path: "/pa/PA01001/list.mi"
+      http_method: "POST"
+      controller: "PA01001Controller"
+      method_name: "getList"
+      request:
+        datasets:
+          - name: "ds_master"
+            vo_class: "PA01001MVO"
+            schema: "COMPLETE"
+            columns:
+              - name: "siteCd"
+                type: "STRING"
+                size: 256
+        variables:
+          - name: "COMM_PageNo"
+            type: "INTEGER"
+      response:
+        datasets:
+          - name: "ds_Mst"
+            vo_class: "PA01001MVO"
+            schema: "COMPLETE"
+        variables:
+          - name: "ErrorCode"
+            type: "STRING"
+            standard: true
+          - name: "COMM_TotalCount"
+            type: "INTEGER"

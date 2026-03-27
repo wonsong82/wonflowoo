@@ -1,0 +1,289 @@
+# Schema: gap-analysis.yaml & gap-by-feature.yaml
+# Skill: s2-03-validation-gap-analysis
+# Stage: 2 - Validation
+# Phase: 2.3 - Gap Analysis
+# Version: 1.0.0
+
+schema_info:
+  name: "gap-analysis"
+  version: "1.0.0"
+  skill_id: "s2-03-validation-gap-analysis"
+  output_files:
+    - "gap-analysis.yaml"
+    - "gap-by-feature.yaml"
+  output_path: "work/specs/stage2-outputs/phase3/{Priority}/{Domain}/"
+
+# =============================================================================
+# gap-analysis.yaml 구조
+# =============================================================================
+gap_analysis:
+  root:
+    required:
+      - metadata
+      - summary
+      - gaps
+      - gate_evaluation
+    optional:
+      - remediation_summary
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s2-03-validation-gap-analysis"
+      - generated_at:
+          type: string
+          $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+      - domain:
+          type: string
+          $ref: "common-types.schema.yaml#/identifiers/domain_code"
+      - source_report:
+          type: string
+          description: "S2-02 comparison-report.yaml 경로"
+
+  summary:
+    required:
+      - total_gaps:
+          type: integer
+          minimum: 0
+      - by_severity:
+          type: object
+          required:
+            - critical:
+                type: integer
+                minimum: 0
+            - major:
+                type: integer
+                minimum: 0
+            - minor:
+                type: integer
+                minimum: 0
+            - false_positive:
+                type: integer
+                minimum: 0
+      - by_type:
+          type: object
+          required:
+            - under_specification:
+                type: integer
+            - over_specification:
+                type: integer
+    optional:
+      - by_root_cause:
+          type: object
+
+  gaps:
+    type: array
+    item:
+      $ref: "#/gap_item"
+
+  gap_item:
+    required:
+      - id:
+          type: string
+          pattern: "^GAP-[A-Z]{2,3}-\\d{3}$"
+      - discrepancy_id:
+          type: string
+          pattern: "^DISC-\\d{3}$"
+      - type:
+          type: string
+          enum: ["under_specification", "over_specification"]
+      - dimension:
+          type: string
+          enum: ["endpoint", "service", "sql", "entity"]
+      - severity:
+          type: string
+          enum: ["critical", "major", "minor", "false_positive"]
+      - severity_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+      - location:
+          type: object
+      - analysis:
+          type: object
+      - remediation:
+          type: object
+
+  gate_evaluation:
+    required:
+      - criteria:
+          type: object
+          required:
+            - all_classified:
+                type: boolean
+            - critical_count:
+                type: integer
+      - result:
+          type: string
+          enum: ["PASS", "WARNING", "FAIL"]
+
+# =============================================================================
+# gap-by-feature.yaml 구조
+# =============================================================================
+gap_by_feature:
+  root:
+    required:
+      - metadata
+      - summary
+      - features
+    optional:
+      - priority_order
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s2-03-validation-gap-analysis"
+      - generated_at:
+          type: string
+      - domain:
+          type: string
+
+  summary:
+    required:
+      - total_features:
+          type: integer
+      - features_with_gaps:
+          type: integer
+      - features_clean:
+          type: integer
+
+  features:
+    type: array
+    item:
+      $ref: "#/feature_gap_item"
+
+  feature_gap_item:
+    required:
+      - feature_id:
+          type: string
+          $ref: "common-types.schema.yaml#/identifiers/feature_id"
+      - gap_summary:
+          type: object
+      - gaps:
+          type: array
+      - overall_status:
+          type: string
+          enum: ["clean", "needs_remediation", "critical"]
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys_analysis"
+      targets: ["metadata", "summary", "gaps", "gate_evaluation"]
+      applies_to: "gap-analysis.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V002"
+      name: "required_keys_by_feature"
+      targets: ["metadata", "summary", "features"]
+      applies_to: "gap-by-feature.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V003"
+      name: "generated_by_exact"
+      target: "metadata.generated_by"
+      expected: "s2-03-validation-gap-analysis"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V004"
+      name: "severity_enum_valid"
+      target: "gaps[].severity"
+      enum: ["critical", "major", "minor", "false_positive"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "gap_type_enum_valid"
+      target: "gaps[].type"
+      enum: ["under_specification", "over_specification"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V006"
+      name: "dimension_enum_valid"
+      target: "gaps[].dimension"
+      enum: ["endpoint", "service", "sql", "entity"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V007"
+      name: "gap_id_pattern"
+      target: "gaps[].id"
+      pattern: "^GAP-[A-Z]{2,3}-\\d{3}$"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V008"
+      name: "gate_result_valid"
+      target: "gate_evaluation.result"
+      enum: ["PASS", "WARNING", "FAIL"]
+      on_fail: "ERROR"
+      blocking: true
+
+  metric:
+    - rule_id: "V009"
+      name: "severity_count_consistency"
+      description: "severity별 합계가 total_gaps와 일치"
+      check: "sum(by_severity.*) == total_gaps"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V010"
+      name: "all_gaps_classified"
+      description: "모든 gap에 severity 할당"
+      check: "every gap has severity"
+      on_fail: "ERROR"
+      blocking: true
+
+# =============================================================================
+# 예시
+# =============================================================================
+valid_example_gap_analysis:
+  metadata:
+    generated_by: "s2-03-validation-gap-analysis"
+    generated_at: "2026-01-08T12:00:00Z"
+    domain: "PA"
+    source_report: "work/specs/stage2-outputs/phase2/P2/PA/comparison-report.yaml"
+
+  summary:
+    total_gaps: 68
+    by_severity:
+      critical: 0
+      major: 23
+      minor: 45
+      false_positive: 0
+    by_type:
+      under_specification: 45
+      over_specification: 23
+
+  gaps:
+    - id: "GAP-PA-001"
+      discrepancy_id: "DISC-001"
+      type: "under_specification"
+      dimension: "endpoint"
+      severity: "major"
+      severity_score: 70
+      location:
+        source_file: "PA01005Controller.java"
+        source_line: 45
+      analysis:
+        root_cause: "missing_in_spec"
+        impact_score: 65
+      remediation:
+        strategy: "add_to_spec"
+        priority: 2
+
+  gate_evaluation:
+    criteria:
+      all_classified: true
+      critical_count: 0
+    result: "PASS"

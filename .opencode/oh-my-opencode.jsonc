@@ -1,0 +1,6 @@
+{
+  // Increase sub-agent limit for long development/testing sessions
+  "background_task": {
+    "maxDescendants": 200
+  }
+}

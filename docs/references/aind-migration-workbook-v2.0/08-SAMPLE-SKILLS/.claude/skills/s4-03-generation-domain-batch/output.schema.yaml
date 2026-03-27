@@ -1,0 +1,275 @@
+# Schema: generation-progress.yaml, checkpoint.yaml
+# Skill: s4-03-generation-domain-batch
+# Stage: 4 - Generation
+# Phase: 4.3 - Domain Batch Generation
+# Version: 1.0.0
+
+schema_info:
+  name: "domain-batch"
+  version: "1.0.0"
+  skill_id: "s4-03-generation-domain-batch"
+  output_files:
+    - "generation-progress.yaml"
+    - "checkpoint.yaml"
+  output_path: "work/specs/stage4-outputs/phase3/"
+
+# =============================================================================
+# generation-progress.yaml 구조
+# =============================================================================
+generation_progress:
+  root:
+    required:
+      - metadata
+      - summary
+      - by_priority
+      - by_domain
+    optional:
+      - failed_features
+      - session_stats
+      - ready_for_integration
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s4-03-generation-domain-batch"
+      - started_at:
+          type: string
+          $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+      - last_updated:
+          type: string
+          $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+
+  summary:
+    required:
+      - total_features:
+          type: integer
+          minimum: 1
+      - completed:
+          type: integer
+          minimum: 0
+      - failed:
+          type: integer
+          minimum: 0
+      - in_progress:
+          type: integer
+          minimum: 0
+      - completion_percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+
+  by_priority:
+    type: object
+    required:
+      - P0
+      - P1
+      - P2
+      - P3
+    each:
+      required:
+        - total:
+            type: integer
+        - completed:
+            type: integer
+      optional:
+        - domains:
+            type: array
+
+  by_domain:
+    type: object
+    each:
+      required:
+        - total:
+            type: integer
+        - completed:
+            type: integer
+        - failed:
+            type: integer
+
+# =============================================================================
+# checkpoint.yaml 구조
+# =============================================================================
+checkpoint:
+  root:
+    required:
+      - metadata
+      - status
+    optional:
+      - last_completed_batch
+      - failed_features
+      - retry_queue
+      - resume_from
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s4-03-generation-domain-batch"
+      - saved_at:
+          type: string
+
+  status:
+    required:
+      - current_batch:
+          type: string
+      - batches_completed:
+          type: integer
+      - batches_remaining:
+          type: integer
+
+  failed_features:
+    type: array
+    items:
+      type: string
+      $ref: "common-types.schema.yaml#/identifiers/feature_id"
+
+  retry_queue:
+    type: array
+    items:
+      type: string
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys_progress"
+      targets: ["metadata", "summary", "by_priority", "by_domain"]
+      applies_to: "generation-progress.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V002"
+      name: "required_keys_checkpoint"
+      targets: ["metadata", "status"]
+      applies_to: "checkpoint.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V003"
+      name: "generated_by_exact"
+      target: "metadata.generated_by"
+      expected: "s4-03-generation-domain-batch"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V004"
+      name: "priority_all_present"
+      target: "by_priority"
+      check: "contains P0, P1, P2, P3"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "completion_percentage_valid"
+      target: "summary.completion_percentage"
+      range: [0, 100]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V006"
+      name: "completed_lte_total"
+      target: "summary"
+      check: "completed <= total_features"
+      on_fail: "ERROR"
+      blocking: true
+
+  metric:
+    - rule_id: "V007"
+      name: "sum_consistency"
+      description: "completed + failed + in_progress == total_features"
+      check: "completed + failed + in_progress == total_features"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V008"
+      name: "priority_sum_equals_total"
+      description: "P0+P1+P2+P3 completed == summary.completed"
+      check: "sum(by_priority.*.completed) == summary.completed"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V009"
+      name: "domain_sum_equals_total"
+      description: "도메인별 합계가 전체와 일치"
+      check: "sum(by_domain.*.completed) == summary.completed"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V010"
+      name: "ready_for_integration_check"
+      description: "100% 완료 시 ready_for_integration == true"
+      check: "if completion_percentage == 100 then ready_for_integration == true"
+      on_fail: "ERROR"
+      blocking: true
+
+# =============================================================================
+# 예시
+# =============================================================================
+valid_example_progress:
+  metadata:
+    generated_by: "s4-03-generation-domain-batch"
+    started_at: "2026-01-08T10:00:00Z"
+    last_updated: "2026-01-08T16:00:00Z"
+
+  summary:
+    total_features: 700
+    completed: 700
+    failed: 0
+    in_progress: 0
+    completion_percentage: 100.0
+
+  by_priority:
+    P0:
+      total: 50
+      completed: 50
+      domains: ["benitware", "CM", "schedule"]
+    P1:
+      total: 200
+      completed: 200
+      domains: ["SM", "EB"]
+    P2:
+      total: 400
+      completed: 400
+      domains: ["PA", "MM", "SC", "EA", "SA", "PE"]
+    P3:
+      total: 50
+      completed: 50
+      domains: ["QM", "BS"]
+
+  by_domain:
+    PA:
+      total: 443
+      completed: 443
+      failed: 0
+    MM:
+      total: 120
+      completed: 120
+      failed: 0
+
+  failed_features: []
+
+  session_stats:
+    total_sessions: 10
+    avg_features_per_session: 70
+    total_execution_time_minutes: 360
+
+  ready_for_integration: true
+
+valid_example_checkpoint:
+  metadata:
+    generated_by: "s4-03-generation-domain-batch"
+    saved_at: "2026-01-08T14:00:00Z"
+
+  status:
+    current_batch: "B016"
+    batches_completed: 15
+    batches_remaining: 5
+
+  last_completed_batch: "B015"
+  failed_features: ["FEAT-PA-123", "FEAT-PA-456"]
+  retry_queue: ["FEAT-PA-123"]
+  resume_from: "B016"

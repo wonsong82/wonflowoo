@@ -1,0 +1,373 @@
+# Schema: integration-build-report.yaml, auto-fix-report.yaml
+# Skill: s4-05-generation-integration-build
+# Stage: 4 - Generation
+# Phase: 4.5 - Integration Build
+# Version: 1.0.0
+
+schema_info:
+  name: "integration-build"
+  version: "1.0.0"
+  skill_id: "s4-05-generation-integration-build"
+  output_files:
+    - "integration-build-report.yaml"
+    - "auto-fix-report.yaml"
+  output_path: "work/specs/stage4-outputs/phase5/"
+
+# =============================================================================
+# integration-build-report.yaml 구조
+# =============================================================================
+integration_build_report:
+  root:
+    required:
+      - metadata
+      - build_status
+      - compile_result
+      - test_result
+      - coverage_result
+      - gate_decision
+    optional:
+      - build_details
+      - artifacts
+      - next_stage
+      - commit_message
+      - tag
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s4-05-generation-integration-build"
+      - generated_at:
+          type: string
+          $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+      - wave:
+          type: integer
+          minimum: 1
+    optional:
+      - model:
+          type: string
+
+  build_status:
+    type: string
+    enum: ["SUCCESS", "CONDITIONAL", "FAIL"]
+
+  compile_result:
+    required:
+      - status:
+          type: string
+          enum: ["SUCCESS", "FAIL"]
+      - errors:
+          type: integer
+          minimum: 0
+    optional:
+      - warnings:
+          type: integer
+
+  test_result:
+    required:
+      - status:
+          type: string
+          enum: ["SUCCESS", "CONDITIONAL", "FAIL"]
+      - total_tests:
+          type: integer
+          minimum: 0
+      - passed:
+          type: integer
+          minimum: 0
+      - failed:
+          type: integer
+          minimum: 0
+      - pass_rate:
+          type: number
+          minimum: 0
+          maximum: 100
+    optional:
+      - skipped:
+          type: integer
+
+  coverage_result:
+    required:
+      - status:
+          type: string
+          enum: ["SUCCESS", "CONDITIONAL", "FAIL"]
+      - line_coverage:
+          type: number
+          minimum: 0
+          maximum: 100
+    optional:
+      - branch_coverage:
+          type: number
+      - instruction_coverage:
+          type: number
+      - by_package:
+          type: object
+
+  gate_decision:
+    required:
+      - result:
+          type: string
+          enum: ["PASS", "CONDITIONAL_PASS", "FAIL"]
+    optional:
+      - criteria_met:
+          type: array
+
+# =============================================================================
+# auto-fix-report.yaml 구조
+# =============================================================================
+auto_fix_report:
+  root:
+    required:
+      - metadata
+      - summary
+      - by_category
+    optional:
+      - escalated_issues
+      - changes_applied
+      - next_action
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s4-05-auto-fix-engine"
+      - generated_at:
+          type: string
+      - build_attempt:
+          type: integer
+          minimum: 1
+
+  summary:
+    required:
+      - total_errors:
+          type: integer
+          minimum: 0
+      - auto_fixed:
+          type: integer
+          minimum: 0
+      - regenerated:
+          type: integer
+          minimum: 0
+      - escalated:
+          type: integer
+          minimum: 0
+      - fix_success_rate:
+          type: number
+          minimum: 0
+          maximum: 100
+
+  by_category:
+    type: object
+    categories:
+      - import_errors
+      - type_mismatches
+      - missing_methods
+      - mybatis_errors
+      - annotation_errors
+
+  escalated_issues:
+    type: array
+    item:
+      required:
+        - file:
+            type: string
+        - line:
+            type: integer
+        - error:
+            type: string
+        - reason:
+            type: string
+
+  changes_applied:
+    type: array
+    item:
+      required:
+        - file:
+            type: string
+        - changes:
+            type: array
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys_build_report"
+      targets: ["metadata", "build_status", "compile_result", "test_result", "coverage_result", "gate_decision"]
+      applies_to: "integration-build-report.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V002"
+      name: "required_keys_autofix"
+      targets: ["metadata", "summary", "by_category"]
+      applies_to: "auto-fix-report.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V003"
+      name: "generated_by_exact_build"
+      target: "metadata.generated_by"
+      expected: "s4-05-generation-integration-build"
+      applies_to: "integration-build-report.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V004"
+      name: "generated_by_exact_autofix"
+      target: "metadata.generated_by"
+      expected: "s4-05-auto-fix-engine"
+      applies_to: "auto-fix-report.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "build_status_enum"
+      target: "build_status"
+      enum: ["SUCCESS", "CONDITIONAL", "FAIL"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V006"
+      name: "gate_decision_enum"
+      target: "gate_decision.result"
+      enum: ["PASS", "CONDITIONAL_PASS", "FAIL"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V007"
+      name: "pass_rate_range"
+      target: "test_result.pass_rate"
+      range: [0, 100]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V008"
+      name: "coverage_range"
+      target: "coverage_result.line_coverage"
+      range: [0, 100]
+      on_fail: "ERROR"
+      blocking: true
+
+  metric:
+    - rule_id: "V009"
+      name: "test_sum_consistency"
+      description: "passed + failed + skipped == total_tests"
+      check: "passed + failed + skipped == total_tests"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V010"
+      name: "pass_rate_calculation"
+      description: "pass_rate == (passed / total_tests) * 100"
+      check: "pass_rate approximately equals (passed / total_tests) * 100"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V011"
+      name: "gate_pass_criteria"
+      description: "PASS 시 test_pass_rate >= 80% AND line_coverage >= 80%"
+      check: "if gate_decision.result == 'PASS' then pass_rate >= 80 and line_coverage >= 80"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V012"
+      name: "autofix_sum_consistency"
+      description: "auto_fixed + regenerated + escalated <= total_errors"
+      check: "auto_fixed + regenerated + escalated <= total_errors"
+      on_fail: "WARNING"
+      blocking: false
+
+# =============================================================================
+# 예시
+# =============================================================================
+valid_example_build_report:
+  metadata:
+    generated_by: "s4-05-generation-integration-build"
+    generated_at: "2026-01-08T20:00:00Z"
+    wave: 1
+    model: "claude-opus-4-5-20251101"
+
+  build_status: "SUCCESS"
+
+  build_details:
+    gradle_version: "8.5"
+    java_version: "17"
+    spring_boot_version: "3.2.1"
+    total_classes: 4200
+    total_lines: 250000
+
+  compile_result:
+    status: "SUCCESS"
+    errors: 0
+    warnings: 15
+
+  test_result:
+    status: "SUCCESS"
+    total_tests: 2100
+    passed: 1890
+    failed: 168
+    skipped: 42
+    pass_rate: 90.0
+
+  coverage_result:
+    status: "SUCCESS"
+    line_coverage: 82.5
+    branch_coverage: 75.3
+    instruction_coverage: 80.1
+
+  gate_decision:
+    result: "PASS"
+    criteria_met:
+      - "build_succeeds: true"
+      - "test_pass_rate: 90.0% (>= 80%)"
+      - "code_coverage: 82.5% (>= 80%)"
+      - "compile_errors: 0"
+
+  next_stage: "Stage 5 - Assurance"
+  commit_message: "feat(S4-P4.5): Integration build successful"
+  tag: "wave-1-rc1"
+
+valid_example_autofix_report:
+  metadata:
+    generated_by: "s4-05-auto-fix-engine"
+    generated_at: "2026-01-08T19:30:00Z"
+    build_attempt: 2
+
+  summary:
+    total_errors: 45
+    auto_fixed: 38
+    regenerated: 5
+    escalated: 2
+    fix_success_rate: 95.6
+
+  by_category:
+    import_errors:
+      count: 25
+      fixed: 25
+      method: "known_mappings"
+    type_mismatches:
+      count: 8
+      fixed: 6
+      skipped: 2
+    missing_methods:
+      count: 5
+      regenerated: 5
+    mybatis_errors:
+      count: 5
+      fixed: 4
+      escalated: 1
+    annotation_errors:
+      count: 2
+      fixed: 2
+
+  escalated_issues:
+    - file: "PA01001Service.java"
+      line: 45
+      error: "Circular dependency detected"
+      reason: "Architectural issue requires human decision"
+
+  next_action:
+    if_success: "Proceed to test execution"
+    if_failure: "Review escalated issues with Tech Lead"

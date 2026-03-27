@@ -1,0 +1,195 @@
+# Schema: Project Scaffold Validation
+# Skill: s4-01-generation-project-scaffold
+# Stage: 4 - Generation
+# Phase: 4.1 - Project Scaffold
+# Version: 1.0.0
+
+schema_info:
+  name: "project-scaffold"
+  version: "1.0.0"
+  skill_id: "s4-01-generation-project-scaffold"
+  output_type: "project_structure"
+  output_files:
+    - "next-hallain/build.gradle.kts"
+    - "next-hallain/settings.gradle.kts"
+    - "next-hallain/src/main/java/com/hallain/HallainApplication.java"
+    - "next-hallain/src/main/resources/application.yml"
+  output_path: "next-hallain/"
+
+# =============================================================================
+# Scaffold 검증 구조
+# =============================================================================
+scaffold_validation:
+  required_files:
+    gradle:
+      - path: "next-hallain/build.gradle.kts"
+        type: file
+        required: true
+      - path: "next-hallain/settings.gradle.kts"
+        type: file
+        required: true
+      - path: "next-hallain/gradlew"
+        type: file
+        required: true
+
+    source:
+      - path: "next-hallain/src/main/java/com/hallain/HallainApplication.java"
+        type: file
+        required: true
+
+    resources:
+      - path: "next-hallain/src/main/resources/application.yml"
+        type: file
+        required: true
+
+    common_module:
+      - path: "next-hallain/src/main/java/com/hallain/common/response/ApiResponse.java"
+        type: file
+        required: true
+      - path: "next-hallain/src/main/java/com/hallain/common/exception/GlobalExceptionHandler.java"
+        type: file
+        required: true
+
+  required_directories:
+    - path: "next-hallain/src/main/java/com/hallain/"
+      type: directory
+    - path: "next-hallain/src/main/resources/"
+      type: directory
+    - path: "next-hallain/src/main/resources/mapper/"
+      type: directory
+    - path: "next-hallain/src/test/java/"
+      type: directory
+    - path: "next-hallain/gradle/wrapper/"
+      type: directory
+
+# =============================================================================
+# build.gradle.kts 내용 검증
+# =============================================================================
+gradle_content:
+  required_plugins:
+    - "org.springframework.boot"
+    - "io.spring.dependency-management"
+
+  required_dependencies:
+    - "spring-boot-starter-web"
+    - "spring-boot-starter-validation"
+    - "mybatis-spring-boot-starter"
+    - "ojdbc11"
+    - "springdoc-openapi"
+    - "lombok"
+
+  java_version:
+    minimum: "17"
+
+# =============================================================================
+# application.yml 내용 검증
+# =============================================================================
+application_config:
+  required_properties:
+    - "spring.application.name"
+    - "server.port"
+    - "mybatis.mapper-locations"
+    - "mybatis.configuration.map-underscore-to-camel-case"
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "gradle_files_exist"
+      targets: ["build.gradle.kts", "settings.gradle.kts"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V002"
+      name: "main_class_exists"
+      targets: ["HallainApplication.java"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V003"
+      name: "config_files_exist"
+      targets: ["application.yml"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V004"
+      name: "common_module_exists"
+      targets: ["ApiResponse.java", "GlobalExceptionHandler.java"]
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V005"
+      name: "spring_boot_plugin"
+      target: "build.gradle.kts"
+      check: "contains org.springframework.boot"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V006"
+      name: "java_version_17"
+      target: "build.gradle.kts"
+      check: "JavaVersion.VERSION_17"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V007"
+      name: "mybatis_dependency"
+      target: "build.gradle.kts"
+      check: "contains mybatis-spring-boot-starter"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V008"
+      name: "oracle_driver"
+      target: "build.gradle.kts"
+      check: "contains ojdbc11"
+      on_fail: "ERROR"
+      blocking: true
+
+  executable:
+    - rule_id: "V009"
+      name: "gradle_build_dryrun"
+      command: "cd backend && ./gradlew build --dry-run"
+      expected: "exit_code == 0"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V010"
+      name: "gradle_compile"
+      command: "cd backend && ./gradlew compileJava"
+      expected: "exit_code == 0"
+      on_fail: "ERROR"
+      blocking: true
+
+# =============================================================================
+# 예시
+# =============================================================================
+valid_example_directory:
+  structure: |
+    next-hallain/
+    ├── build.gradle.kts
+    ├── settings.gradle.kts
+    ├── gradlew
+    ├── gradlew.bat
+    ├── gradle/
+    │   └── wrapper/
+    │       ├── gradle-wrapper.jar
+    │       └── gradle-wrapper.properties
+    └── src/
+        ├── main/
+        │   ├── java/
+        │   │   └── com/hallain/
+        │   │       ├── HallainApplication.java
+        │   │       └── common/
+        │   │           ├── config/
+        │   │           ├── response/
+        │   │           ├── exception/
+        │   │           └── entity/
+        │   └── resources/
+        │       ├── application.yml
+        │       └── mapper/
+        └── test/
+            └── java/

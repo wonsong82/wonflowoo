@@ -1,0 +1,290 @@
+# Schema: validation-summary.yaml
+# Skill: s5-02-assurance-functional-validation
+# Stage: 5 - Assurance
+# Phase: 5.2 - Functional Validation
+# Version: 1.0.0
+
+schema_info:
+  name: "functional-validation"
+  version: "1.0.0"
+  skill_id: "s5-02-assurance-functional-validation"
+  output_files:
+    - "validation-summary.yaml"
+  output_path: "work/specs/stage5-outputs/phase2/"
+
+# =============================================================================
+# validation-summary.yaml 구조
+# =============================================================================
+validation_summary:
+  root:
+    required:
+      - metadata
+      - summary
+      - by_dimension
+      - by_domain
+      - gate_evaluation
+    optional:
+      - discrepancies
+      - by_feature
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s5-02-assurance-functional-validation"
+      - generated_at:
+          type: string
+          $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+      - spec_source:
+          type: string
+      - code_source:
+          type: string
+
+  summary:
+    required:
+      - total_features:
+          type: integer
+          minimum: 1
+      - validated:
+          type: integer
+          minimum: 0
+      - passed:
+          type: integer
+          minimum: 0
+      - failed:
+          type: integer
+          minimum: 0
+      - pass_rate:
+          type: number
+          minimum: 0
+          maximum: 100
+      - overall_score:
+          type: number
+          minimum: 0
+          maximum: 100
+      - result:
+          type: string
+          enum: ["PASS", "CONDITIONAL", "FAIL"]
+
+  by_dimension:
+    required:
+      - endpoint_match:
+          type: object
+      - business_logic:
+          type: object
+      - data_access:
+          type: object
+      - integration:
+          type: object
+
+  dimension_item:
+    required:
+      - weight:
+          type: number
+      - score:
+          type: number
+          minimum: 0
+          maximum: 100
+      - passed:
+          type: integer
+      - failed:
+          type: integer
+
+  by_domain:
+    type: object
+    each:
+      required:
+        - features:
+            type: integer
+        - passed:
+            type: integer
+        - failed:
+            type: integer
+        - score:
+            type: number
+
+  discrepancies:
+    type: array
+    item:
+      required:
+        - id:
+            type: string
+            pattern: "^DISC-FUNC-\\d{3}$"
+        - feature_id:
+            type: string
+        - direction:
+            type: string
+            enum: ["forward", "backward"]
+        - dimension:
+            type: string
+            enum: ["endpoint", "business_logic", "data_access", "integration"]
+        - severity:
+            type: string
+            enum: ["critical", "major", "minor"]
+        - description:
+            type: string
+
+  gate_evaluation:
+    required:
+      - gate_id:
+          type: string
+          exact: "G5.2"
+      - result:
+          type: string
+          enum: ["PASS", "CONDITIONAL", "FAIL"]
+      - criteria:
+          type: array
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys"
+      targets: ["metadata", "summary", "by_dimension", "by_domain", "gate_evaluation"]
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V002"
+      name: "generated_by_exact"
+      target: "metadata.generated_by"
+      expected: "s5-02-assurance-functional-validation"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V003"
+      name: "result_enum_valid"
+      target: "summary.result"
+      enum: ["PASS", "CONDITIONAL", "FAIL"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V004"
+      name: "direction_enum_valid"
+      target: "discrepancies[].direction"
+      enum: ["forward", "backward"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "dimension_enum_valid"
+      target: "discrepancies[].dimension"
+      enum: ["endpoint", "business_logic", "data_access", "integration"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V006"
+      name: "gate_id_exact"
+      target: "gate_evaluation.gate_id"
+      expected: "G5.2"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V007"
+      name: "all_dimensions_present"
+      target: "by_dimension"
+      check: "has endpoint_match, business_logic, data_access, integration"
+      on_fail: "ERROR"
+      blocking: true
+
+  metric:
+    - rule_id: "V008"
+      name: "pass_rate_range"
+      target: "summary.pass_rate"
+      range: [0, 100]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V009"
+      name: "overall_score_range"
+      target: "summary.overall_score"
+      range: [0, 100]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V010"
+      name: "pass_rate_calculation"
+      description: "pass_rate == (passed / validated) * 100"
+      check: "pass_rate approximately equals (passed / validated) * 100"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V011"
+      name: "pass_criteria_check"
+      description: "PASS 시 pass_rate >= 90%"
+      check: "if result == 'PASS' then pass_rate >= 90"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V012"
+      name: "dimension_weights_sum"
+      description: "dimension weights 합계 == 1.0"
+      check: "sum(by_dimension.*.weight) == 1.0"
+      on_fail: "WARNING"
+      blocking: false
+
+# =============================================================================
+# 예시
+# =============================================================================
+valid_example:
+  metadata:
+    generated_by: "s5-02-assurance-functional-validation"
+    generated_at: "2026-01-08T19:00:00Z"
+    spec_source: "work/specs/stage2-outputs/phase4/"
+    code_source: "next-hallain/src/main/java/"
+
+  summary:
+    total_features: 700
+    validated: 700
+    passed: 665
+    failed: 35
+    pass_rate: 95.0
+    overall_score: 92.5
+    result: "PASS"
+
+  by_dimension:
+    endpoint_match:
+      weight: 0.25
+      score: 98.0
+      passed: 686
+      failed: 14
+    business_logic:
+      weight: 0.30
+      score: 90.0
+      passed: 630
+      failed: 70
+    data_access:
+      weight: 0.25
+      score: 92.0
+      passed: 644
+      failed: 56
+    integration:
+      weight: 0.20
+      score: 88.0
+      passed: 616
+      failed: 84
+
+  by_domain:
+    PA:
+      features: 443
+      passed: 421
+      failed: 22
+      score: 93.5
+    MM:
+      features: 120
+      passed: 114
+      failed: 6
+      score: 94.2
+
+  gate_evaluation:
+    gate_id: "G5.2"
+    result: "PASS"
+    criteria:
+      - check: "pass_rate >= 90%"
+        actual: 95.0
+        result: "PASS"
+      - check: "overall_score >= 85"
+        actual: 92.5
+        result: "PASS"

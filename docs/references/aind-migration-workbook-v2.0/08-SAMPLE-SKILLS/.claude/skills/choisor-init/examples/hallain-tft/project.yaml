@@ -1,0 +1,126 @@
+# ============================================================================
+# Hallain TFT Example - project.yaml
+# ============================================================================
+# Pre-configured project settings for Hallain TFT migration project.
+
+name: "hallain-tft"
+description: "Hallain TFT Legacy Migration - Spring MVC 3.0 to Spring Boot 3.2"
+
+feature:
+  id_prefix: "FEAT-"
+  gap_suffix: "GAP"
+  skip_gap_features: true
+
+domain:
+  skip_domains: []
+  priority_map:
+    P0-Foundation:
+      - "CM"           # Common/Core modules
+      - "BW"           # Benitware framework
+      - "SD"           # Schedule
+    P1-Hub:
+      - "PA"           # Production Application
+    P2-Core:
+      - "MM"           # Material Management
+      - "QM"           # Quality Management
+      - "SC"           # Supply Chain
+      - "SM"           # Sales Management
+    P3-Supporting:
+      - "EB"           # E-Business
+      - "EA"           # Enterprise Application
+      - "SA"           # System Administration
+      - "PE"           # Performance
+      - "BS"           # Business Support
+
+phase_types:
+  stage1:
+    phase1: "domain"      # Feature Inventory (domain-level)
+    phase2: "domain"      # Protocol Analysis (domain-level)
+    phase3: "feature"     # Deep Analysis (per-feature)
+    phase4: "feature"     # Spec Generation (per-feature)
+  stage2:
+    phase1: "domain"      # Source Inventory
+    phase2: "domain"      # Structural Comparison
+    phase3: "feature"     # Gap Analysis
+    phase4: "feature"     # Spec Completion
+  stage3:
+    phase1: "system"      # Dependency Graph
+    phase2: "system"      # Interface Extraction
+    phase3: "system"      # Technical Debt
+    phase4: "system"      # Architecture Design
+    phase5: "system"      # Generation Spec
+  stage4:
+    phase1: "system"      # Project Scaffold
+    phase2: "system"      # Mini-pilot
+    phase3: "feature"     # Domain Batch
+    phase4: "feature"     # Test Generation
+    phase5: "system"      # Integration Build
+  stage5:
+    phase1: "feature"     # Structural Check
+    phase2: "feature"     # Functional Validation
+    phase3: "feature"     # API Contract Test
+    phase4: "system"      # Performance Baseline
+    phase5: "system"      # Quality Gate
+
+paths:
+  source_base: "hallain"
+  target_base: "next-hallain"
+  java_src_path: "src/main/java"
+  mapper_path: "src/main/resources/mapper"
+  java_package: "com/hallain"
+  specs_root: "work/specs"
+
+stages:
+  stage1:
+    name: "Discovery"
+    phases: ["phase1", "phase2", "phase3", "phase4"]
+    skills:
+      phase1: "s1-01-discovery-feature-inventory"
+      phase2: "s1-02-discovery-miplatform-protocol"
+      phase3: "s1-03-discovery-deep-analysis"
+      phase4: "s1-04-discovery-spec-generation"
+
+  stage2:
+    name: "Validation"
+    phases: ["phase1", "phase2", "phase3", "phase4"]
+    skills:
+      phase1: "s2-01-validation-source-inventory"
+      phase2: "s2-02-validation-structural-comparison"
+      phase3: "s2-03-validation-gap-analysis"
+      phase4: "s2-04-validation-spec-completion"
+
+  stage3:
+    name: "Preparation"
+    phases: ["phase1", "phase2", "phase3", "phase4", "phase5"]
+    skills:
+      phase1: "s3-01-preparation-dependency-graph"
+      phase2: "s3-02-preparation-interface-extraction"
+      phase3: "s3-03-preparation-technical-debt"
+      phase4: "s3-04-preparation-architecture-design"
+      phase5: "s3-05-preparation-generation-spec"
+
+  stage4:
+    name: "Generation"
+    phases: ["phase1", "phase2", "phase3", "phase4", "phase5"]
+    skills:
+      phase1: "s4-01-generation-project-scaffold"
+      phase2: "s4-02-generation-mini-pilot"
+      phase3: "s4-03-generation-domain-batch"
+      phase4: "s4-04-generation-test-generation"
+      phase5: "s4-05-generation-integration-build"
+
+  stage5:
+    name: "Assurance"
+    phases: ["phase1", "phase2", "phase3", "phase4", "phase5"]
+    skills:
+      phase1: "s5-01-assurance-structural-check"
+      phase2: "s5-02-assurance-functional-validation"
+      phase3: "s5-03-assurance-api-contract-test"
+      phase4: "s5-04-assurance-performance-baseline"
+      phase5: "s5-05-assurance-quality-gate"
+
+task_sources:
+  feature_inventory_base: "work/specs/stage1-outputs/phase1"
+  feature_inventory_pattern: "work/specs/stage1-outputs/phase1/{priority}/{domain}/feature-inventory.yaml"
+  stage1_specs: "work/specs/stage1-outputs/phase3"
+  stage4_specs: "work/specs/stage1-outputs/phase3"

@@ -1,0 +1,70 @@
+# ============================================================================
+# Custom Project Example - config.yaml
+# ============================================================================
+# Minimal runtime configuration for custom projects.
+# Customize this template for your specific needs.
+
+# Assignment control
+assignment:
+  enabled: true
+  delay: null
+  stale_timeout: 10
+
+# Auto-commit settings
+auto_commit:
+  enabled: true
+  commit_on_completion: true
+
+# Limit Monitor control
+limit_monitor:
+  ignore_limit: true
+
+# Daemon configuration
+daemon:
+  refresh_interval: 10
+
+# Provider settings (customize as needed)
+provider: "anthropic"
+default_model: "claude-opus-4-5-20251101"
+
+# Claude Code session configuration
+claude_code:
+  max_sessions: 1
+  max_output_tokens: 65536
+  default_model: "claude-opus-4-5-20251101"
+  default_model_bedrock: "global.anthropic.claude-opus-4-5-20251101-v1:0"
+
+# Current workflow position
+current:
+  stage: "stage1"
+  phase: "phase1"
+
+# Phase Gate settings (adjust max_allowed_phase as needed)
+phase_gate:
+  max_allowed_phase: "phase4"
+  auto_to_max: true
+
+# Parallel execution settings
+parallel:
+  enabled: true
+  pairs:
+    - ["s4-03", "s4-04"]  # Customize parallel pairs for your workflow
+  max_parallel_sessions: 10
+
+# Path configurations
+paths:
+  skills_root: ".claude/skills"
+  contracts_path: ".claude/skills/common/inter-stage-contracts.yaml"
+
+# Work scope filtering (customize domains/stages as needed)
+work_scope:
+  enabled_domains: null   # null = all, or ["domain1", "domain2"]
+  enabled_stages: null    # null = all, or [1, 2, 3]
+
+# Priority algorithm
+priority:
+  algorithm: "weighted_score"  # or "fifo"
+  weights:
+    dependency_ready: 0.5
+    priority_score: 0.3
+    estimated_duration: 0.2

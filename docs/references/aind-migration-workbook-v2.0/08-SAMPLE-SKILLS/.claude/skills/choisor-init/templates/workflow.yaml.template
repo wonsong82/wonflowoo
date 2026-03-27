@@ -1,0 +1,120 @@
+# ============================================================================
+# Choisor Workflow Definition Template
+# ============================================================================
+# Defines workflow progression rules and dependencies.
+# Variables: {{name}}
+
+name: "{{name}}-workflow"
+version: "1.0.0"
+
+# Stage progression rules
+progression:
+  # All features must complete phase N before any can proceed to N+1
+  phase_gate:
+    enabled: true
+    strict_mode: true
+
+  # Stage completion requirements
+  stage_completion:
+    stage1:
+      required_phases: ["phase1", "phase2", "phase3", "phase4"]
+      gate_condition: "all_features_complete"
+    stage2:
+      required_phases: ["phase1", "phase2", "phase3", "phase4"]
+      gate_condition: "all_features_complete"
+    stage3:
+      required_phases: ["phase1", "phase2", "phase3", "phase4", "phase5"]
+      gate_condition: "system_complete"
+    stage4:
+      required_phases: ["phase1", "phase2", "phase3", "phase4", "phase5"]
+      gate_condition: "all_features_complete"
+    stage5:
+      required_phases: ["phase1", "phase2", "phase3", "phase4", "phase5"]
+      gate_condition: "all_features_complete"
+
+# Phase dependencies
+dependencies:
+  # Inter-stage dependencies
+  stage2:
+    requires: ["stage1.phase4"]
+
+  stage3:
+    requires: ["stage2.phase4"]
+
+  stage4:
+    requires: ["stage3.phase5"]
+
+  stage5:
+    requires: ["stage4.phase5"]
+
+  # Intra-stage phase dependencies (implicit: phaseN requires phaseN-1)
+
+# Parallel execution rules
+parallel_execution:
+  enabled: true
+
+  # Skills that can run in parallel for same feature
+  parallel_pairs:
+    - skills: ["s4-03-generation-domain-batch", "s4-04-generation-test-generation"]
+      condition: "s4-03 completes for feature"
+      description: "Code gen + test gen can run in parallel"
+
+  # Maximum concurrent sessions
+  max_concurrent:
+    total: 10
+    per_stage: 5
+    per_domain: 3
+
+# Task generation rules
+task_generation:
+  # Which phases generate per-feature tasks
+  feature_level:
+    - "stage1.phase3"
+    - "stage1.phase4"
+    - "stage2.phase3"
+    - "stage2.phase4"
+    - "stage4.phase3"
+    - "stage4.phase4"
+    - "stage5.phase1"
+    - "stage5.phase2"
+    - "stage5.phase3"
+
+  # Which phases generate domain-level tasks
+  domain_level:
+    - "stage1.phase1"
+    - "stage1.phase2"
+    - "stage2.phase1"
+    - "stage2.phase2"
+
+  # Which phases generate system-level tasks (single task)
+  system_level:
+    - "stage3.phase1"
+    - "stage3.phase2"
+    - "stage3.phase3"
+    - "stage3.phase4"
+    - "stage3.phase5"
+    - "stage4.phase1"
+    - "stage4.phase2"
+    - "stage4.phase5"
+    - "stage5.phase4"
+    - "stage5.phase5"
+
+# Validation checkpoints
+validation:
+  # Run validation at these points
+  checkpoints:
+    - after: "stage1.phase4"
+      validator: "spec_completeness"
+      threshold: 0.95
+
+    - after: "stage2.phase4"
+      validator: "ground_truth_coverage"
+      threshold: 0.99
+
+    - after: "stage4.phase5"
+      validator: "build_success"
+      required: true
+
+    - after: "stage5.phase5"
+      validator: "quality_gate"
+      required: true

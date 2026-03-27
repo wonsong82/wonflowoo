@@ -1,0 +1,246 @@
+# Hallain TFT Migration Workflow
+# Spring MVC 3.0.5 → Spring Boot 3.2 migration workflow definition
+
+workflow:
+  name: "hallain_tft"
+  description: "AI-based MES system migration: Spring MVC to Spring Boot"
+  skill_pattern: "s{stage}-{phase:02d}-*"
+  skill_dir: ".claude/skills"
+
+  stages:
+    # Stage 1: Discovery
+    - id: "discovery"
+      number: 1
+      name: "Discovery"
+      description: "Feature inventory and deep analysis"
+      output_dir: "stage1-outputs"
+      phases:
+        - id: "feature-inventory"
+          number: 1
+          type: "domain"
+          name: "Feature Inventory"
+          skill: "s1-01-discovery-feature-inventory"
+          outputs:
+            - "feature-inventory.yaml"
+
+        - id: "miplatform-protocol"
+          number: 2
+          type: "domain"
+          name: "MiPlatform Protocol"
+          skill: "s1-02-discovery-miplatform-protocol"
+          outputs:
+            - "miplatform-protocol.yaml"
+
+        - id: "deep-analysis"
+          number: 3
+          type: "feature"
+          name: "Deep Analysis"
+          skill: "s1-03-discovery-deep-analysis"
+          outputs:
+            - "summary.yaml"
+            - "main.yaml"
+
+        - id: "spec-generation"
+          number: 4
+          type: "feature"
+          name: "Spec Generation"
+          skill: "s1-04-discovery-spec-generation"
+          outputs:
+            - "main.yaml"
+            - "api-specs/*.yaml"
+
+    # Stage 2: Validation
+    - id: "validation"
+      number: 2
+      name: "Validation"
+      description: "Ground truth comparison and gap analysis"
+      output_dir: "stage2-outputs"
+      phases:
+        - id: "source-inventory"
+          number: 1
+          type: "domain"
+          name: "Source Inventory"
+          skill: "s2-01-validation-source-inventory"
+          outputs:
+            - "source-inventory.yaml"
+
+        - id: "structural-comparison"
+          number: 2
+          type: "domain"
+          name: "Structural Comparison"
+          skill: "s2-02-validation-structural-comparison"
+          outputs:
+            - "comparison-report.yaml"
+            - "coverage-matrix.yaml"
+
+        - id: "gap-analysis"
+          number: 3
+          type: "domain"
+          name: "Gap Analysis"
+          skill: "s2-03-validation-gap-analysis"
+          outputs:
+            - "gap-analysis.yaml"
+
+        - id: "spec-completion"
+          number: 4
+          type: "feature"
+          name: "Spec Completion"
+          skill: "s2-04-validation-spec-completion"
+          outputs:
+            - "completion-report.yaml"
+
+    # Stage 3: Preparation
+    - id: "preparation"
+      number: 3
+      name: "Preparation"
+      description: "Architecture design and generation specs"
+      output_dir: "stage3-outputs"
+      phases:
+        - id: "dependency-graph"
+          number: 1
+          type: "system"
+          name: "Dependency Graph"
+          skill: "s3-01-preparation-dependency-graph"
+          outputs:
+            - "dependency-graph.yaml"
+
+        - id: "interface-extraction"
+          number: 2
+          type: "domain"
+          name: "Interface Extraction"
+          skill: "s3-02-preparation-interface-extraction"
+          outputs:
+            - "interfaces.yaml"
+
+        - id: "technical-debt"
+          number: 3
+          type: "domain"
+          name: "Technical Debt"
+          skill: "s3-03-preparation-technical-debt"
+          outputs:
+            - "technical-debt.yaml"
+
+        - id: "architecture-design"
+          number: 4
+          type: "system"
+          name: "Architecture Design"
+          skill: "s3-04-preparation-architecture-design"
+          outputs:
+            - "architecture.yaml"
+
+        - id: "generation-spec"
+          number: 5
+          type: "system"
+          name: "Generation Spec"
+          skill: "s3-05-preparation-generation-spec"
+          outputs:
+            - "generation-spec.yaml"
+
+    # Stage 4: Generation
+    - id: "generation"
+      number: 4
+      name: "Generation"
+      description: "Code generation and integration"
+      output_dir: "stage4-outputs"
+      parallel_pairs:
+        - ["domain-batch", "test-generation"]
+      phases:
+        - id: "project-scaffold"
+          number: 1
+          type: "system"
+          name: "Project Scaffold"
+          skill: "s4-01-generation-project-scaffold"
+          outputs:
+            - "build.gradle"
+            - "settings.gradle"
+
+        - id: "mini-pilot"
+          number: 2
+          type: "system"
+          name: "Mini Pilot"
+          skill: "s4-02-generation-mini-pilot"
+          outputs:
+            - "pilot-report.yaml"
+
+        - id: "domain-batch"
+          number: 3
+          type: "feature"
+          name: "Domain Batch"
+          skill: "s4-03-generation-domain-batch"
+          outputs:
+            - "**/*Service.java"
+            - "**/*Mapper.java"
+            - "**/*Mapper.xml"
+
+        - id: "test-generation"
+          number: 4
+          type: "feature"
+          name: "Test Generation"
+          skill: "s4-04-generation-test-generation"
+          outputs:
+            - "**/*Test.java"
+
+        - id: "integration-build"
+          number: 5
+          type: "system"
+          name: "Integration Build"
+          skill: "s4-05-generation-integration-build"
+          outputs:
+            - "build-report.yaml"
+
+    # Stage 5: Assurance
+    - id: "assurance"
+      number: 5
+      name: "Assurance"
+      description: "Quality validation and gate checks"
+      output_dir: "stage5-outputs"
+      phases:
+        - id: "structural-check"
+          number: 1
+          type: "feature"
+          name: "Structural Check"
+          skill: "s5-01-assurance-structural-check"
+          outputs:
+            - "structural-report.yaml"
+
+        - id: "functional-validation"
+          number: 2
+          type: "feature"
+          name: "Functional Validation"
+          skill: "s5-02-assurance-functional-validation"
+          outputs:
+            - "functional-report.yaml"
+
+        - id: "api-contract-test"
+          number: 3
+          type: "feature"
+          name: "API Contract Test"
+          skill: "s5-03-assurance-api-contract-test"
+          outputs:
+            - "api-contract-report.yaml"
+
+        - id: "performance-baseline"
+          number: 4
+          type: "feature"
+          name: "Performance Baseline"
+          skill: "s5-04-assurance-performance-baseline"
+          outputs:
+            - "performance-report.yaml"
+
+        - id: "quality-gate"
+          number: 5
+          type: "system"
+          name: "Quality Gate"
+          skill: "s5-05-assurance-quality-gate"
+          outputs:
+            - "quality-gate-report.yaml"
+
+  # Task source configuration
+  task_sources:
+    feature_inventory:
+      path: "work/specs/stage1-outputs/phase1/{priority}/{domain}/feature-inventory.yaml"
+      pattern: "work/specs/stage1-outputs/phase1/**/feature-inventory.yaml"
+
+    specs:
+      path: "work/specs/stage1-outputs/phase3/{priority}/{domain}/{feature}/"
+      pattern: "work/specs/stage1-outputs/phase3/**/**/FEAT-*/"

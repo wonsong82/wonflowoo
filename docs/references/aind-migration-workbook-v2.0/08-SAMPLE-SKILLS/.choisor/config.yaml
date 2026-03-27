@@ -1,0 +1,79 @@
+# ============================================================================
+# Choisor Operation Settings (Runtime Control)
+# ============================================================================
+# This file contains runtime/operational settings only.
+# Project properties (stages, task_sources, domain mappings) are in project.yaml.
+
+# Assignment control
+assignment:
+  enabled: false # true: 정상 할당, false: 새 작업 할당 중지
+  delay: 0 # minutes 할당 지연, 0 or null: 정상 할당
+  stale_timeout: 10 # minutes: 비활성 세션 stale 판정 기준 (default: 10)
+
+# Auto-commit control
+auto_commit:
+  enabled: true
+  commit_on_completion: true
+
+# Limit Monitor control
+limit_monitor:
+  ignore_limit: true  # true: limit 감지 무시 (오탐 방지), false: 정상 감지
+
+# Daemon configuration
+daemon:
+  refresh_interval: 10  # seconds (5-300)
+
+# API Provider: anthropic | bedrock
+provider: "anthropic"
+
+# Claude Code session configuration
+claude_code:
+  max_sessions: 2
+  max_output_tokens: 65536
+  default_model: "claude-opus-4-5-20251101"
+  default_model_bedrock: "global.anthropic.claude-opus-4-5-20251101-v1:0"
+
+# ============================================================================
+# Runtime State (current workflow position)
+# ============================================================================
+
+current:
+  stage: "stage1"      # stage1 | stage2 | stage3 | stage4 | stage5
+  phase: "phase3"      # 현재 진행 중인 phase
+
+# ============================================================================
+# Phase Gate (runtime control)
+# ============================================================================
+
+phase_gate:
+  max_allowed_phase: "phase4"  # Maximum phase allowed for execution
+  auto_to_max: true            # Auto-advance to max allowed phase
+
+# ============================================================================
+# Work Scope (runtime filter)
+# ============================================================================
+
+work_scope:
+  enabled_domains: [bw, cm, sd]  # null = 모든 도메인
+## cm(28), pa(309), mm(110), eb(109), sc(101), sm(64), ea(58), sa(37), pe(54), bs(30), qm(15)
+
+# ============================================================================
+# Priority Algorithm (runtime)
+# ============================================================================
+
+priority:
+  algorithm: "weighted_score" # "weighted_score" | "fifo"
+  weights:
+    dependency_ready: 0.5
+    priority_score: 0.3
+    estimated_duration: 0.2
+
+# ============================================================================
+# Path Overrides (runtime - only operational paths)
+# ============================================================================
+# NOTE: Project-specific paths (source_base, target_base, java paths) are in project.yaml
+# NOTE: stages and task_sources are now in project.yaml (project properties)
+
+paths:
+  skills_root: ".claude/skills"
+  contracts_path: ".claude/skills/common/inter-stage-contracts.yaml"

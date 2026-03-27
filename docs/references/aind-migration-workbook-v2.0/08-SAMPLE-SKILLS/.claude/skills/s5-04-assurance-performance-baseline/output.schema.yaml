@@ -1,0 +1,290 @@
+# Schema: performance-baseline.yaml
+# Skill: s5-04-assurance-performance-baseline
+# Stage: 5 - Assurance
+# Phase: 5.4 - Performance Baseline
+# Version: 1.0.0
+
+schema_info:
+  name: "performance-baseline"
+  version: "1.0.0"
+  skill_id: "s5-04-assurance-performance-baseline"
+  output_files:
+    - "performance-baseline.yaml"
+  output_path: "work/specs/stage5-outputs/phase4/"
+
+# =============================================================================
+# performance-baseline.yaml 구조
+# =============================================================================
+performance_baseline:
+  root:
+    required:
+      - metadata
+      - summary
+      - n_plus_1_analysis
+      - query_complexity
+    optional:
+      - transaction_analysis
+      - by_domain
+      - recommendations
+      - technical_debt
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s5-04-assurance-performance-baseline"
+      - generated_at:
+          type: string
+          $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+      - gate_type:
+          type: string
+          exact: "non_blocking"
+
+  summary:
+    required:
+      - total_services:
+          type: integer
+          minimum: 0
+      - total_issues:
+          type: integer
+          minimum: 0
+      - by_severity:
+          type: object
+      - risk_score:
+          type: number
+          minimum: 0
+          maximum: 100
+      - result:
+          type: string
+          enum: ["PASS", "WARNING", "ALERT"]
+          description: "Non-blocking - WARNING/ALERT만 발생, FAIL 없음"
+
+  n_plus_1_analysis:
+    required:
+      - total_detections:
+          type: integer
+          minimum: 0
+      - by_severity:
+          type: object
+    optional:
+      - detections:
+          type: array
+
+  n_plus_1_detection:
+    required:
+      - id:
+          type: string
+          pattern: "^N1-\\d{3}$"
+      - file:
+          type: string
+      - line:
+          type: integer
+      - method:
+          type: string
+      - pattern:
+          type: string
+      - severity:
+          type: string
+          enum: ["high", "medium", "low"]
+    optional:
+      - recommendation:
+          type: string
+      - estimated_impact:
+          type: string
+
+  query_complexity:
+    required:
+      - total_queries:
+          type: integer
+      - high_complexity:
+          type: integer
+      - medium_complexity:
+          type: integer
+      - low_complexity:
+          type: integer
+    optional:
+      - complex_queries:
+          type: array
+
+  by_domain:
+    type: object
+    each:
+      required:
+        - n_plus_1_count:
+            type: integer
+        - complex_queries:
+            type: integer
+        - risk_score:
+            type: number
+
+  recommendations:
+    type: array
+    item:
+      required:
+        - id:
+            type: string
+        - issue_type:
+            type: string
+        - priority:
+            type: string
+            enum: ["high", "medium", "low"]
+        - description:
+            type: string
+      optional:
+        - affected_files:
+            type: array
+        - estimated_effort:
+            type: string
+
+  technical_debt:
+    required:
+      - total_items:
+          type: integer
+      - estimated_hours:
+          type: number
+    optional:
+      - by_category:
+          type: object
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys"
+      targets: ["metadata", "summary", "n_plus_1_analysis", "query_complexity"]
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V002"
+      name: "generated_by_exact"
+      target: "metadata.generated_by"
+      expected: "s5-04-assurance-performance-baseline"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V003"
+      name: "gate_type_exact"
+      target: "metadata.gate_type"
+      expected: "non_blocking"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V004"
+      name: "result_enum_valid"
+      target: "summary.result"
+      enum: ["PASS", "WARNING", "ALERT"]
+      description: "Non-blocking gate이므로 FAIL 없음"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "severity_enum_valid"
+      target: "n_plus_1_analysis.detections[].severity"
+      enum: ["high", "medium", "low"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V006"
+      name: "priority_enum_valid"
+      target: "recommendations[].priority"
+      enum: ["high", "medium", "low"]
+      on_fail: "ERROR"
+      blocking: true
+
+  metric:
+    - rule_id: "V007"
+      name: "risk_score_range"
+      target: "summary.risk_score"
+      range: [0, 100]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V008"
+      name: "severity_sum_consistency"
+      description: "by_severity 합계 == total_detections"
+      check: "high + medium + low == total_detections"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V009"
+      name: "complexity_sum_consistency"
+      description: "complexity 합계 == total_queries"
+      check: "high_complexity + medium_complexity + low_complexity == total_queries"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V010"
+      name: "alert_threshold"
+      description: "ALERT 시 high severity > 10"
+      check: "if result == 'ALERT' then by_severity.high > 10"
+      on_fail: "WARNING"
+      blocking: false
+
+# =============================================================================
+# 예시
+# =============================================================================
+valid_example:
+  metadata:
+    generated_by: "s5-04-assurance-performance-baseline"
+    generated_at: "2026-01-08T21:00:00Z"
+    gate_type: "non_blocking"
+
+  summary:
+    total_services: 700
+    total_issues: 25
+    by_severity:
+      high: 5
+      medium: 12
+      low: 8
+    risk_score: 35.0
+    result: "WARNING"
+
+  n_plus_1_analysis:
+    total_detections: 15
+    by_severity:
+      high: 5
+      medium: 8
+      low: 2
+    detections:
+      - id: "N1-001"
+        file: "PA01001Service.java"
+        line: 45
+        method: "getListWithDetails"
+        pattern: "Loop-based Query"
+        severity: "high"
+        recommendation: "Use batch query instead of loop"
+        estimated_impact: "High - affects list operations"
+
+  query_complexity:
+    total_queries: 2100
+    high_complexity: 50
+    medium_complexity: 200
+    low_complexity: 1850
+
+  by_domain:
+    PA:
+      n_plus_1_count: 8
+      complex_queries: 25
+      risk_score: 40.0
+    MM:
+      n_plus_1_count: 4
+      complex_queries: 12
+      risk_score: 28.0
+
+  recommendations:
+    - id: "REC-001"
+      issue_type: "N+1 Query"
+      priority: "high"
+      description: "Implement batch fetching for PA01001Service.getListWithDetails"
+      affected_files: ["PA01001Service.java", "PA01001Mapper.java"]
+      estimated_effort: "2 hours"
+
+  technical_debt:
+    total_items: 25
+    estimated_hours: 40
+    by_category:
+      n_plus_1: 15
+      complex_query: 10

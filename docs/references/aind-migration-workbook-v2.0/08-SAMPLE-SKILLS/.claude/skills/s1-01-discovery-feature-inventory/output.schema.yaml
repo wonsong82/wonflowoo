@@ -1,0 +1,364 @@
+# Schema: feature-inventory.yaml
+# Skill: s1-01-discovery-feature-inventory
+# Stage: 1 - Discovery
+# Phase: 1.1 - Feature Inventory
+# Version: 1.0.0
+
+schema_info:
+  name: "feature-inventory"
+  version: "1.0.0"
+  skill_id: "s1-01-discovery-feature-inventory"
+  output_file: "feature-inventory.yaml"
+  output_path: "work/specs/stage1-outputs/phase1/{Priority}/{Domain}/"
+
+# =============================================================================
+# 최상위 구조 정의
+# =============================================================================
+root:
+  required:
+    - metadata
+    - summary
+    - features
+  optional: []
+
+# =============================================================================
+# metadata 섹션
+# =============================================================================
+metadata:
+  description: "파일 메타데이터"
+  required:
+    - generated_by:
+        type: string
+        exact: "s1-01-discovery-feature-inventory"
+        validation_message: "generated_by는 정확히 's1-01-discovery-feature-inventory'여야 함"
+    - generated_at:
+        type: string
+        $ref: "../common/types.schema.yaml#/formats/iso8601_datetime"
+    - domain:
+        type: string
+        $ref: "../common/types.schema.yaml#/identifiers/domain_code"
+  optional:
+    - source_path:
+        type: string
+        description: "분석 대상 소스 경로"
+
+# =============================================================================
+# summary 섹션
+# =============================================================================
+summary:
+  description: "분석 결과 요약 통계"
+  required:
+    - total_features:
+        type: integer
+        minimum: 0
+        description: "총 Feature 수"
+    - total_endpoints:
+        type: integer
+        minimum: 0
+        description: "총 Endpoint 수"
+    - total_controllers:
+        type: integer
+        minimum: 0
+        description: "총 Controller 클래스 수"
+  optional:
+    - by_complexity:
+        type: object
+        description: "복잡도별 분류"
+        properties:
+          low:
+            type: integer
+            minimum: 0
+          medium:
+            type: integer
+            minimum: 0
+          high:
+            type: integer
+            minimum: 0
+        validation_rule: "low + medium + high == total_features"
+
+# =============================================================================
+# features 섹션
+# =============================================================================
+features:
+  description: "Feature 목록"
+  type: array
+  min_items: 1
+  item:
+    required:
+      - feature_id:
+          type: string
+          $ref: "../common/types.schema.yaml#/identifiers/feature_id"
+          description: "Feature 고유 식별자"
+      - screen_id:
+          type: string
+          $ref: "../common/types.schema.yaml#/identifiers/screen_id"
+          description: "화면 ID"
+      - complexity:
+          type: string
+          $ref: "../common/types.schema.yaml#/severity_types/complexity"
+          description: "복잡도 (low/medium/high)"
+      - endpoints:
+          type: array
+          min_items: 1
+          description: "Endpoint 목록"
+          item:
+            $ref: "#/endpoint_item"
+    optional:
+      - name:
+          type: string
+          description: "Feature 명칭 (한글 가능)"
+      - controllers:
+          type: array
+          description: "Controller 클래스 목록"
+          item:
+            $ref: "#/controller_item"
+
+# =============================================================================
+# 하위 구조 정의
+# =============================================================================
+endpoint_item:
+  description: "단일 Endpoint 정의"
+  required:
+    - path:
+        type: string
+        pattern: "^/[a-z0-9/_-]+$"
+        description: "정규화된 엔드포인트 경로 (소문자)"
+        validation_message: "소문자 경로, /로 시작해야 함 (예: /pa/pa01001/list)"
+    - method:
+        type: string
+        $ref: "../common/types.schema.yaml#/api_types/http_method"
+        description: "HTTP 메서드"
+    - controller:
+        type: string
+        $ref: "../common/types.schema.yaml#/java_types/class_name"
+        description: "Controller 클래스명"
+    - method_name:
+        type: string
+        $ref: "../common/types.schema.yaml#/java_types/method_name"
+        description: "Controller 메서드명"
+  optional:
+    - description:
+        type: string
+        description: "Endpoint 설명"
+
+controller_item:
+  description: "단일 Controller 정의"
+  required:
+    - class:
+        type: string
+        $ref: "../common/types.schema.yaml#/java_types/class_name"
+    - file:
+        type: string
+        description: "소스 파일 경로"
+    - methods_count:
+        type: integer
+        minimum: 1
+        description: "메서드 수"
+
+# =============================================================================
+# 검증 규칙 (Validation Rules)
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys"
+      description: "필수 키 존재 확인"
+      targets: ["metadata", "summary", "features"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V002"
+      name: "yaml_syntax"
+      description: "YAML 문법 오류 없음"
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V003"
+      name: "generated_by_exact"
+      description: "generated_by 값 정확히 일치"
+      target: "metadata.generated_by"
+      expected: "s1-01-discovery-feature-inventory"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V004"
+      name: "feature_id_pattern"
+      description: "feature_id 패턴 일치"
+      target: "features[].feature_id"
+      pattern: "^FEAT-[A-Z]{2,3}-\\d{3}$"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "screen_id_pattern"
+      description: "screen_id 패턴 일치"
+      target: "features[].screen_id"
+      pattern: "^[A-Z]{2}\\d{5}$"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V006"
+      name: "complexity_enum"
+      description: "complexity 값 유효성"
+      target: "features[].complexity"
+      enum: ["low", "medium", "high"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V007"
+      name: "http_method_enum"
+      description: "HTTP method 값 유효성"
+      target: "features[].endpoints[].method"
+      enum: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V008"
+      name: "endpoint_path_lowercase"
+      description: "endpoint path 소문자"
+      target: "features[].endpoints[].path"
+      pattern: "^/[a-z0-9/_-]+$"
+      on_fail: "WARNING"
+      blocking: false
+
+  metric:
+    - rule_id: "V009"
+      name: "feature_count_consistency"
+      description: "total_features와 features 배열 길이 일치"
+      check: "summary.total_features == len(features)"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V010"
+      name: "endpoint_count_consistency"
+      description: "total_endpoints와 실제 endpoint 수 일치"
+      check: "summary.total_endpoints == sum(len(f.endpoints) for f in features)"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V011"
+      name: "complexity_sum_consistency"
+      description: "복잡도별 합계 일치"
+      check: "summary.by_complexity.low + medium + high == summary.total_features"
+      on_fail: "WARNING"
+      blocking: false
+
+  integrity:
+    - rule_id: "V012"
+      name: "single_screen_id_per_feature"
+      description: "Feature 내 모든 endpoint가 동일한 screen_id에 속해야 함"
+      check: "all endpoints in feature derive from same screen_id pattern"
+      on_fail: "ERROR"
+      blocking: true
+      rationale: "서로 다른 screen_id의 endpoint 혼합 시 마이그레이션 단위 불명확"
+
+    - rule_id: "V013"
+      name: "endpoint_screen_id_consistency"
+      description: "endpoint path의 screen_id가 feature의 screen_id와 일치"
+      check: "endpoint path contains feature.screen_id (case-insensitive)"
+      on_fail: "WARNING"
+      blocking: false
+      rationale: "URL path와 screen_id 불일치 시 그룹핑 오류 가능성"
+
+    - rule_id: "V014"
+      name: "controller_screen_id_affinity"
+      description: "Feature 내 Controller들이 동일 screen_id 계열"
+      check: "all controller names in feature contain same screen_id prefix"
+      on_fail: "WARNING"
+      blocking: false
+
+# =============================================================================
+# 예시 (Valid Example)
+# =============================================================================
+valid_example:
+  metadata:
+    generated_by: "s1-01-discovery-feature-inventory"
+    generated_at: "2026-01-08T10:30:00Z"
+    domain: "PA"
+    source_path: "hallain/src/main/java/com/hallain/pa/"
+
+  summary:
+    total_features: 2
+    total_endpoints: 5
+    total_controllers: 2
+    by_complexity:
+      low: 1
+      medium: 1
+      high: 0
+
+  features:
+    - feature_id: "FEAT-PA-001"
+      screen_id: "PA01001"
+      name: "생산계획 조회"
+      complexity: "medium"
+      endpoints:
+        - path: "/pa/pa01001/list"
+          method: "POST"
+          controller: "PA01001Controller"
+          method_name: "getList"
+        - path: "/pa/pa01001/detail"
+          method: "POST"
+          controller: "PA01001Controller"
+          method_name: "getDetail"
+        - path: "/pa/pa01001/save"
+          method: "POST"
+          controller: "PA01001Controller"
+          method_name: "save"
+      controllers:
+        - class: "PA01001Controller"
+          file: "src/main/java/com/hallain/pa/controller/PA01001Controller.java"
+          methods_count: 3
+
+    - feature_id: "FEAT-PA-002"
+      screen_id: "PA01002"
+      name: "생산실적 조회"
+      complexity: "low"
+      endpoints:
+        - path: "/pa/pa01002/list"
+          method: "POST"
+          controller: "PA01002Controller"
+          method_name: "getList"
+        - path: "/pa/pa01002/detail"
+          method: "POST"
+          controller: "PA01002Controller"
+          method_name: "getDetail"
+
+# =============================================================================
+# 오류 예시 (Invalid Examples)
+# =============================================================================
+invalid_examples:
+  - name: "camelCase feature_id"
+    error: "V004"
+    input:
+      featureId: "FEAT-PA-001"  # 잘못됨: camelCase
+    expected:
+      feature_id: "FEAT-PA-001"
+
+  - name: "lowercase screen_id"
+    error: "V005"
+    input:
+      screen_id: "pa01001"  # 잘못됨: 소문자
+    expected:
+      screen_id: "PA01001"
+
+  - name: "uppercase complexity"
+    error: "V006"
+    input:
+      complexity: "Medium"  # 잘못됨: 대문자 시작
+    expected:
+      complexity: "medium"
+
+  - name: "url instead of path"
+    error: "unexpected_key"
+    input:
+      url: "/pa/pa01001/list"  # 잘못됨: url 대신 path
+    expected:
+      path: "/pa/pa01001/list"
+
+  - name: "uppercase path"
+    error: "V008"
+    input:
+      path: "/PA/PA01001/List"  # 잘못됨: 대문자 포함
+    expected:
+      path: "/pa/pa01001/list"

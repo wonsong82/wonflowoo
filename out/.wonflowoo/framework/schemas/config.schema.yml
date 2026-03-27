@@ -1,0 +1,11 @@
+# config.yml Schema Reference
+# Documents the expected structure of .wonflowoo/workspace/config.yml
+# Do NOT fill in values here — this is a schema reference only.
+
+# project: (required, filled during Architecture phase)
+#   name: string — human-readable project name
+#   description: string — one to three sentence summary
+
+# auto_proceed: boolean (default: false)
+#   false: STOP at every phase gate, present summary, wait for human confirmation
+#   true: auto-proceed through phase gates without stopping

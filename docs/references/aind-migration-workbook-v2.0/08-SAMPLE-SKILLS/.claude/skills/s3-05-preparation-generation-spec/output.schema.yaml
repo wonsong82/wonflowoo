@@ -1,0 +1,321 @@
+# Schema: generation-templates/*.yaml, generation-rules.yaml
+# Skill: s3-05-preparation-generation-spec
+# Stage: 3 - Preparation
+# Phase: 3.5 - Generation Spec
+# Version: 1.0.0
+
+schema_info:
+  name: "generation-spec"
+  version: "1.0.0"
+  skill_id: "s3-05-preparation-generation-spec"
+  output_files:
+    - "generation-templates/controller-template.yaml"
+    - "generation-templates/service-template.yaml"
+    - "generation-templates/repository-template.yaml"
+    - "generation-templates/dto-template.yaml"
+    - "generation-templates/entity-template.yaml"
+    - "generation-templates/mapper-xml-template.yaml"
+    - "generation-rules.yaml"
+  output_path: "work/specs/stage3-outputs/phase5/"
+
+# =============================================================================
+# generation-templates/{layer}-template.yaml 구조
+# =============================================================================
+layer_template:
+  root:
+    required:
+      - metadata
+      - template
+    optional:
+      - example_output
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s3-05-preparation-generation-spec"
+      - layer:
+          type: string
+          enum: ["controller", "service", "repository", "dto", "entity", "mapper_xml"]
+      - version:
+          type: string
+
+  template:
+    required:
+      - file_name:
+          type: string
+          description: "템플릿 변수 포함 (예: ${SCREEN_ID}Controller.java)"
+      - package:
+          type: string
+    optional:
+      - imports:
+          type: array
+      - class_annotations:
+          type: array
+      - class_body:
+          type: string
+      - method_templates:
+          type: object
+      - structure:
+          type: string
+      - sql_templates:
+          type: object
+      - dynamic_sql_patterns:
+          type: object
+
+# =============================================================================
+# generation-rules.yaml 구조
+# =============================================================================
+generation_rules:
+  root:
+    required:
+      - metadata
+      - summary
+      - templates
+      - ibatis_to_mybatis
+      - naming_conventions
+    optional:
+      - annotation_rules
+      - generation_order
+      - ready_for_stage4
+
+  metadata:
+    required:
+      - generated_by:
+          type: string
+          exact: "s3-05-preparation-generation-spec"
+      - generated_at:
+          type: string
+          $ref: "common-types.schema.yaml#/formats/iso8601_datetime"
+      - version:
+          type: string
+
+  summary:
+    required:
+      - templates_created:
+          type: integer
+          minimum: 6
+      - transformation_rules:
+          type: integer
+      - naming_rules:
+          type: integer
+
+  templates:
+    type: array
+    item:
+      $ref: "#/template_summary_item"
+
+  template_summary_item:
+    required:
+      - name:
+          type: string
+      - layer:
+          type: string
+          enum: ["controller", "service", "repository", "dto", "entity", "mapper_xml"]
+      - status:
+          type: string
+          enum: ["ready", "draft", "pending"]
+
+  ibatis_to_mybatis:
+    required:
+      - root_element:
+          type: object
+      - attributes:
+          type: array
+      - parameter_binding:
+          type: array
+      - dynamic_sql:
+          type: object
+    optional:
+      - stored_procedure:
+          type: object
+
+  naming_conventions:
+    required:
+      - classes:
+          type: object
+      - methods:
+          type: object
+      - packages:
+          type: object
+    optional:
+      - files:
+          type: object
+
+# =============================================================================
+# 검증 규칙
+# =============================================================================
+validation_rules:
+  structural:
+    - rule_id: "V001"
+      name: "required_keys_template"
+      targets: ["metadata", "template"]
+      applies_to: "generation-templates/*.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V002"
+      name: "required_keys_rules"
+      targets: ["metadata", "summary", "templates", "ibatis_to_mybatis", "naming_conventions"]
+      applies_to: "generation-rules.yaml"
+      on_fail: "ERROR"
+      blocking: true
+
+  content:
+    - rule_id: "V003"
+      name: "generated_by_exact"
+      target: "metadata.generated_by"
+      expected: "s3-05-preparation-generation-spec"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V004"
+      name: "layer_enum_valid"
+      target: "metadata.layer"
+      enum: ["controller", "service", "repository", "dto", "entity", "mapper_xml"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V005"
+      name: "template_status_valid"
+      target: "templates[].status"
+      enum: ["ready", "draft", "pending"]
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V006"
+      name: "file_name_has_variable"
+      target: "template.file_name"
+      check: "contains ${SCREEN_ID} or ${ENTITY_NAME}"
+      description: "템플릿 파일명에 변수 포함"
+      on_fail: "WARNING"
+      blocking: false
+
+    - rule_id: "V007"
+      name: "package_has_variable"
+      target: "template.package"
+      check: "contains ${DOMAIN}"
+      description: "패키지에 도메인 변수 포함"
+      on_fail: "WARNING"
+      blocking: false
+
+  metric:
+    - rule_id: "V008"
+      name: "all_templates_created"
+      description: "6개 템플릿 모두 존재"
+      check: "templates_created >= 6"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V009"
+      name: "naming_conventions_complete"
+      description: "네이밍 규칙 완전 (classes, methods, packages)"
+      check: "naming_conventions has classes, methods, packages"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V010"
+      name: "ibatis_mybatis_mapping_complete"
+      description: "iBatis→MyBatis 변환 규칙 완전"
+      check: "ibatis_to_mybatis has root_element, attributes, parameter_binding, dynamic_sql"
+      on_fail: "ERROR"
+      blocking: true
+
+    - rule_id: "V011"
+      name: "all_templates_ready"
+      description: "모든 템플릿 status가 ready"
+      check: "every template has status == 'ready'"
+      on_fail: "WARNING"
+      blocking: false
+
+# =============================================================================
+# 예시
+# =============================================================================
+valid_example_template:
+  metadata:
+    generated_by: "s3-05-preparation-generation-spec"
+    layer: "controller"
+    version: "1.0.0"
+
+  template:
+    file_name: "${SCREEN_ID}Controller.java"
+    package: "com.hallain.${DOMAIN}.controller"
+    imports:
+      - "lombok.RequiredArgsConstructor"
+      - "org.springframework.web.bind.annotation.*"
+    class_annotations:
+      - "@RestController"
+      - "@RequestMapping(\"/api/${DOMAIN}/${SCREEN_ID_LOWER}\")"
+      - "@RequiredArgsConstructor"
+
+valid_example_rules:
+  metadata:
+    generated_by: "s3-05-preparation-generation-spec"
+    generated_at: "2026-01-08T15:00:00Z"
+    version: "1.0.0"
+
+  summary:
+    templates_created: 6
+    transformation_rules: 25
+    naming_rules: 18
+
+  templates:
+    - name: "controller-template.yaml"
+      layer: "controller"
+      status: "ready"
+    - name: "service-template.yaml"
+      layer: "service"
+      status: "ready"
+    - name: "repository-template.yaml"
+      layer: "repository"
+      status: "ready"
+    - name: "dto-template.yaml"
+      layer: "dto"
+      status: "ready"
+    - name: "entity-template.yaml"
+      layer: "entity"
+      status: "ready"
+    - name: "mapper-xml-template.yaml"
+      layer: "mapper_xml"
+      status: "ready"
+
+  ibatis_to_mybatis:
+    root_element:
+      from: "<sqlMap namespace=\"{ns}\">"
+      to: "<mapper namespace=\"com.hallain.{domain}.repository.{Entity}Mapper\">"
+    attributes:
+      - { from: "parameterClass", to: "parameterType" }
+      - { from: "resultClass", to: "resultType" }
+    parameter_binding:
+      - { from: "#var#", to: "#{var}" }
+      - { from: "$var$", to: "${var}" }
+    dynamic_sql:
+      isNotNull:
+        from: "<isNotNull property=\"{p}\">"
+        to: "<if test=\"{p} != null\">"
+      isNotEmpty:
+        from: "<isNotEmpty property=\"{p}\">"
+        to: "<if test=\"{p} != null and {p} != ''\">"
+
+  naming_conventions:
+    classes:
+      controller: "{Screen}Controller"
+      service: "{Screen}Service"
+      mapper: "{Screen}Mapper"
+    methods:
+      list: "get{Entity}List"
+      one: "get{Entity}"
+      save: "save{Entity}"
+    packages:
+      base: "com.hallain"
+      domain_pattern: "com.hallain.{domain}.{layer}"
+
+  generation_order:
+    1: "Entity"
+    2: "DTO"
+    3: "Mapper Interface"
+    4: "Mapper XML"
+    5: "Service"
+    6: "Controller"
+
+  ready_for_stage4: true

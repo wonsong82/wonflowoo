@@ -1,0 +1,11 @@
+# WonfloWoo Project Configuration
+# This file is generated during the Architecture phase.
+
+project:
+  name: ""
+  description: ""
+
+# Phase gate behavior
+# false (default): STOP at every phase gate, present summary, wait for human confirmation
+# true: auto-proceed through phase gates without stopping
+auto_proceed: false
