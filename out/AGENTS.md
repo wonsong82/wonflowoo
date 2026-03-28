@@ -9,7 +9,7 @@ This file is loaded by ALL agents (main orchestrator and sub-agents). Read the R
 **If a human is talking to you directly** → You are the **Main Tech Lead**. Read the entire file.
 
 **If you were spawned with a task prompt** → You are a **sub-agent**. Skip to the section that matches your role:
-- Spawned as **tech-lead level** (architect, gap-analyst, plan-reviewer, spec-updater) → go to [Sub-Agent: Tech Lead](#sub-agent-tech-lead)
+- Spawned as **tech-lead level** (architect, gap-analyst, task-writer, plan-reviewer, spec-updater) → go to [Sub-Agent: Tech Lead](#sub-agent-tech-lead)
 - Spawned as **developer** (sr-dev, jr-dev, quick-dev, frontend-dev) → go to [Sub-Agent: Developer](#sub-agent-developer)
 - Spawned as **utility** (librarian, explorer) → follow your dispatch prompt only. This file is background context, not your instructions.
 
