@@ -32,6 +32,6 @@
 
 ### Blocking Issues (if rejected)
 
-<!-- Only present on REJECT. Max 3. Each must be specific + actionable. -->
+<!-- Only present on REJECT. Each must be specific + actionable. -->
 
-1. 
+- 

@@ -49,7 +49,7 @@ The plan doc remains high-level. Detailed task files are generated per-wave with
 
 For each wave with N tasks, use this pattern:
 
-1. **Task-file generation dispatch (PARALLEL):** Spawn **N tech leads simultaneously** to expand N high-level task briefs into N full `.wonflowoo/workspace/tasks/{task-id}-{origin}.{task-name}.yml` files.
+1. **Task-file generation dispatch (PARALLEL):** Spawn **N `task-writer` agents simultaneously** to expand N high-level task briefs into N full `.wonflowoo/workspace/tasks/{task-id}-{origin}.{task-name}.yml` files.
 2. **Developer planning dispatch (PARALLEL):** Spawn **N developers simultaneously** (one per task) to write `.plan.md` only.
 3. **Plan review dispatch (PARALLEL):** Spawn **N reviewers simultaneously** (or review directly for simple items) to evaluate each `.plan.md`.
 4. **Implementation dispatch (PARALLEL):** Spawn **N developers simultaneously** for implementation, reusing prior developer session/context when the platform supports continuation.
@@ -126,7 +126,13 @@ Reviewer check is **holistic alignment**, not syntax-only:
 
 If **APPROVED** → orchestrator proceeds to Step 4.
 
-If **REJECTED** → send the developer back to revise (Status → `revision`). Max 3 blocking issues per rejection.
+If **REJECTED** → revision cycle:
+1. Spawn the same developer role with the plan file path
+2. Developer loads the plan file → sees blocking issues in the Review section
+3. Developer revises the Implementation Plan section to address the issues
+4. Developer updates Status: `rejected` → `revision` and clears the Review section
+5. Developer reports back: "Plan revised, ready for re-review"
+6. Orchestrator sends to `plan-reviewer` again → cycle until approved
 
 ---
 

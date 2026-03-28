@@ -70,6 +70,7 @@ Workflow docs reference roles by name. Spawn using this platform mapping:
 | architecture-consultant | Tech-lead (read-only) | @architecture-consultant | Review architecture for issues (Medium+, optional) |
 | gap-analyst | Tech-lead | @tech-lead | Find gaps in requirements/architecture |
 | plan-reviewer | Tech-lead | @plan-reviewer | Review developer .plan.md for holistic alignment |
+| task-writer | Tech-lead | @task-writer | Expand plan briefs into detailed self-contained task instruction files |
 | spec-updater | Tech-lead | @spec-updater | Update specs + _system.yml after developer completes a task |
 | sr-dev | Developer | @sr-dev | Complex multi-file implementation |
 | jr-dev | Developer | @jr-dev | Simple implementation, established patterns |

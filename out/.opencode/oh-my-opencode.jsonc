@@ -1,9 +1,4 @@
 {
-  // WonfloWoo requires higher sub-agent limits due to its delegation model:
-  // - Spawns developers per task (one per task)
-  // - Spawns tech leads for architecture review, gap analysis, plan review
-  // - Spawns specialists (oracle, momus, librarian, explore)
-  // Default of 50 is insufficient for medium+ projects.
   "background_task": {
     "maxDescendants": 9999
   }

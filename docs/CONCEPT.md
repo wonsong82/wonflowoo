@@ -116,11 +116,11 @@ The three roles above are the **conceptual collaboration model**. At runtime, or
 
 | Context Level | Dispatch roles | Typical purpose |
 |---|---|---|
-| **Tech-lead (macro view)** | `architect`, `architecture-consultant`, `gap-analyst`, `plan-reviewer`, `spec-updater` | Architecture design/review, gap detection, plan alignment, spec maintenance |
+| **Tech-lead (macro view)** | `architect`, `architecture-consultant`, `gap-analyst`, `task-writer`, `plan-reviewer`, `spec-updater` | Architecture design/review, gap detection, task expansion, plan alignment, spec maintenance |
 | **Developer (task view)** | `sr-dev`, `jr-dev`, `quick-dev`, `frontend-dev` | Task-level planning and implementation |
 | **Utility (query-scoped)** | `librarian`, `explorer` | External research and internal codebase search |
 
-On OmO, the reasoning-heavy tech-lead roles (`architect`, `gap-analyst`, `spec-updater`) dispatch via `task(subagent_type="sisyphus")` (Opus-routed reasoning worker). Platform-specific dispatch syntax/mapping details remain in the slim core manuals (`AGENTS.md`, `CLAUDE.md`).
+On OmO, the reasoning-heavy tech-lead roles (`architect`, `gap-analyst`, `task-writer`, `plan-reviewer`, `spec-updater`) dispatch via `task(subagent_type="sisyphus")` (Opus-routed reasoning worker). Platform-specific dispatch syntax/mapping details remain in the slim core manuals (`AGENTS.md`, `CLAUDE.md`).
 
 ### Main Tech Lead (Persistent)
 
@@ -826,9 +826,10 @@ The orchestrator plan stays high-level. Detailed task files are generated **per 
 
 For a wave with N tasks:
 
-1. **Task-file generation (N parallel tech-lead dispatches)**
+1. **Task-file generation (N parallel `task-writer` dispatches)**
    - Expand plan briefs into full task YAML files.
    - Load current requirements + architecture docs + specs before writing each task file.
+   - This expansion is done by `task-writer`, not by the orchestrator or `architect`.
 2. **Developer planning (N parallel developer dispatches)**
    - One developer per task writes `.plan.md` only.
 3. **Plan review gate (N parallel reviews, mandatory)**
@@ -868,11 +869,17 @@ Developer plan files use this structure (see `.wonflowoo/framework/schemas/plan.
 
 Before coding, each developer plan is reviewed by orchestrator or (recommended for Medium+) a `plan-reviewer` role.
 
+On OmO, `plan-reviewer` dispatches via `task(subagent_type="sisyphus")` and follows the shared guide `.wonflowoo/framework/agent-guides/plan-reviewer.md`.
+
 This review is **holistic alignment**, not syntax-only:
 - task file ↔ developer plan ↔ requirements/specs/architecture consistency
-- acceptance-criteria coverage
-- dependency and sequencing sanity
-- conventions/guardrails compliance
+
+Required checks (all five):
+1. **Acceptance Criteria Coverage** — covers every acceptance criterion and respects `must_do` / `must_not_do`
+2. **Architecture Fit** — aligns with conventions, tech stack, and module structure
+3. **Executability** — implementation steps are actionable and can be started
+4. **Cross-Module Impact** — evaluates dependency graph / cross-module flows and downstream contract impact
+5. **Blockers** — identifies missing information or contradictions that would stop work
 
 Plan review is a two-part action:
 1. Reviewer updates the `.plan.md` directly (fills **Review** section and updates `Status`).
@@ -880,12 +887,19 @@ Plan review is a two-part action:
 
 The orchestrator remains lean and tracks review state from verdict reports, not by re-reading plan files for status.
 
-`plan-reviewer` outputs APPROVE or REJECT with concrete blocking issues. Rejected plans loop back to developer planning only.
+`plan-reviewer` outputs APPROVE or REJECT with concrete blocking issues. Any blocking issue means REJECT; plans with only non-blocking suggestions are APPROVED.
 
 Non-blocking suggestions protocol:
 - Suggestions are written in the plan file's **Review** section.
 - Developer sees them when reloading the plan for implementation.
 - Non-blocking suggestions do not block approval.
+
+Rejection revision cycle:
+1. Developer reloads the rejected `.plan.md` and reads `### Blocking Issues`
+2. Developer revises the **Implementation Plan** section to address all blocking issues
+3. Developer updates status `rejected` → `revision` and clears prior review content
+4. Plan is sent back to `plan-reviewer` for re-review
+5. Loop continues until reviewer verdict is APPROVE
 
 ### Progress + Failure Handling
 
@@ -2553,7 +2567,7 @@ Each phase produces a confirmed artifact that feeds the next. The orchestrator d
 - **Requirements and plan docs have status fields** — requirements: `pending_approval → approved → amended`. Plan: `pending_approval → approved → in_progress → completed`. Status updated at phase gates when human confirms.
 - **Sub-agents cannot spawn other sub-agents** — confirmed limitation on both OmO and Claude Code. All spawning goes through the main tech lead (flat hierarchy). Developer → tech lead review coordination happens via files (.plan.md), not nested spawning.
 - **Specs are always feature-grouped** — framework constant decided during bootstrap strategy design. The bootstrap pipeline's AI grouping step clusters files into features. `spec_organization` removed from config.yml — not configurable.
-- **Agent definitions in `.claude/agents/`** — Claude Code uses slim wrapper agent files (architecture-consultant, plan-reviewer, explorer, librarian, tech-lead, sr-dev, jr-dev, quick-dev, frontend-dev) that reference shared `.wonflowoo/framework/agent-guides/` instructions. OmO uses built-in specialists (`oracle`, `momus`, `librarian`, `explore`) plus `task(subagent_type="sisyphus")` for architect/gap-analyst/spec-updater tech-lead reasoning work.
+- **Agent definitions in `.claude/agents/`** — Claude Code uses slim wrapper agent files (architecture-consultant, plan-reviewer, explorer, librarian, tech-lead, sr-dev, jr-dev, quick-dev, frontend-dev) that reference shared `.wonflowoo/framework/agent-guides/` instructions. OmO uses built-in specialists (`oracle`, `librarian`, `explore`) plus `task(subagent_type="sisyphus")` for architect/gap-analyst/task-writer/plan-reviewer/spec-updater tech-lead reasoning work.
 - **dependencies.yml is external services only** — captures Shopify API, QuickBooks, SendGrid, S3 etc. NOT npm/pip packages. Skip the file entirely if no external service integrations.
 
 ---

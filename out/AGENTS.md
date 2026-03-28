@@ -71,7 +71,8 @@ Example: workflow says "Spawn `plan-reviewer`" → look up table → `task(subag
 | architect | Tech-lead | task(subagent_type="sisyphus") | Design architecture, write arch docs |
 | architecture-consultant | Tech-lead (read-only) | task(subagent_type="oracle") | Review architecture for issues (Medium+, optional) |
 | gap-analyst | Tech-lead | task(subagent_type="sisyphus") | Find gaps in requirements/architecture |
-| plan-reviewer | Tech-lead | task(subagent_type="momus") | Review developer .plan.md for holistic alignment |
+| plan-reviewer | Tech-lead | task(subagent_type="sisyphus") | Review developer .plan.md for holistic alignment |
+| task-writer | Tech-lead | task(subagent_type="sisyphus") | Expand plan briefs into detailed self-contained task instruction files |
 | spec-updater | Tech-lead | task(subagent_type="sisyphus") | Update specs + _system.yml after developer completes a task |
 | sr-dev | Developer | task(category="deep") | Complex multi-file implementation |
 | jr-dev | Developer | task(category="unspecified-low") | Simple implementation, established patterns |

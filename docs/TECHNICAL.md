@@ -37,7 +37,7 @@ WonfloWoo uses three directories: platform-specific directories (`.claude/`, `.o
 3. **Cross-platform portability**
    - `.wonflowoo/` is fully shared — both OmO and Claude Code read the same specs, architecture, workflows, and agent-guides.
    - `.claude/agents/` is Claude-only but references shared `.wonflowoo/framework/agent-guides/`.
-   - OmO uses built-in agents (oracle, momus, librarian, explore) + Role Routing in AGENTS.md for sub-agent instructions.
+   - OmO dispatches WonfloWoo roles using built-in specialists (`oracle`, `librarian`, `explore`) plus `sisyphus` for tech-lead roles (`architect`, `gap-analyst`, `task-writer`, `plan-reviewer`, `spec-updater`) with Role Routing in AGENTS.md.
 
 ### Updated structure (deliverable state)
 
@@ -62,7 +62,7 @@ project-root/
 │       ├── quick-dev.md             #   Slim wrapper → loads .wonflowoo/framework/agent-guides/developers.md
 │       ├── frontend-dev.md          #   Slim wrapper → loads .wonflowoo/framework/agent-guides/developers.md (frontend)
 │       ├── spec-updater.md          #   Slim wrapper → loads .wonflowoo/framework/agent-guides/spec-updater.md
-│       ├── plan-reviewer.md         #   Claude-only (OmO uses built-in momus agent)
+│       ├── plan-reviewer.md         #   Claude-only wrapper (OmO dispatches plan-reviewer via sisyphus)
 │       ├── architecture-consultant.md  # Claude-only (OmO uses built-in oracle agent)
 │       ├── librarian.md             #   Claude-only (OmO uses built-in librarian agent)
 │       └── explorer.md              #   Claude-only (OmO uses built-in explore agent)
@@ -95,6 +95,8 @@ project-root/
     │   ├── agent-guides/            # Sub-agent instructions — shared across platforms
     │   │   ├── tech-leads.md        #   Spec system context, what to load (tech-lead roles)
     │   │   ├── developers.md        #   Workflow, conventions, change manifest (developer roles)
+    │   │   ├── task-writer.md       #   Expands plan briefs into self-contained task instruction files
+    │   │   ├── plan-reviewer.md     #   5-check review + approve/reject criteria for developer plans
     │   │   └── spec-updater.md      #   Routing logic for updating specs (spec-updater role)
     │   └── examples/                # Reference implementation (read-only)
     │       └── inventory-system/    #   Complete example with all artifact types
@@ -269,7 +271,8 @@ WonfloWoo role intent is stable; execution differs by platform primitives.
 | `architect` | `task(subagent_type="sisyphus")` | `@tech-lead` |
 | `architecture-consultant` (read-only) | `task(subagent_type="oracle")` | `@architecture-consultant` |
 | `gap-analyst` | `task(subagent_type="sisyphus")` | `@tech-lead` |
-| `plan-reviewer` | `task(subagent_type="momus")` | `@plan-reviewer` |
+| `task-writer` | `task(subagent_type="sisyphus")` | `@task-writer` |
+| `plan-reviewer` | `task(subagent_type="sisyphus")` | `@plan-reviewer` |
 | `spec-updater` | `task(subagent_type="sisyphus")` | `@spec-updater` |
 | `librarian` | `task(subagent_type="librarian")` | `@librarian` |
 | `explorer` | `task(subagent_type="explore")` | `@explorer` |
@@ -292,7 +295,7 @@ WonfloWoo role intent is stable; execution differs by platform primitives.
 ### Dispatch lookup enforcement
 
 - Workflow docs should name role intent (for example, "Spawn `plan-reviewer`").
-- The orchestrator must resolve that role via the mapping table before dispatch (`plan-reviewer` → `task(subagent_type="momus")` on OmO).
+- The orchestrator must resolve that role via the mapping table before dispatch (`plan-reviewer` → `task(subagent_type="sisyphus")` on OmO).
 - **CRITICAL:** Never pass role names as `subagent_type` values.
 - OmO dispatch prompts must include `Role: {role-name}` as the first line.
 
@@ -334,6 +337,7 @@ The framework now treats category/model mapping as **platform-native**, not `con
 ### OmO
 - Categories are native runtime concepts.
 - Routing is configured in OmO runtime settings (`.opencode/oh-my-openagent.jsonc`), not in `.wonflowoo/workspace/config.yml`.
+- The old custom `plan-review` category was removed from `.opencode/oh-my-opencode.jsonc`; plan review now routes by role (`plan-reviewer`) via `task(subagent_type="sisyphus")`.
 
 ### Claude Code
 - No category router in `.wonflowoo/workspace/config.yml`.
