@@ -53,7 +53,8 @@ project-root/
 │   ├── skills/                      # Slash commands — shared across platforms (OmO also reads this)
 │   │   ├── bootstrap/SKILL.md       #   /bootstrap — adopt WonfloWoo on existing codebase
 │   │   ├── spec-generate/SKILL.md   #   /spec-generate — AI-assisted spec creation
-│   │   └── spec-validate/SKILL.md   #   /spec-validate — spec quality checks
+│   │   ├── spec-validate/SKILL.md   #   /spec-validate — spec quality checks
+│   │   └── token-usage/SKILL.md     #   /token-usage — track context usage across orchestrator/sub-agents
 │   └── agents/                      # Claude Code sub-agent definitions (OmO uses built-in agents instead)
 │       ├── tech-lead.md             #   Slim wrapper → loads .wonflowoo/framework/agent-guides/tech-leads.md
 │       ├── sr-dev.md                #   Slim wrapper → loads .wonflowoo/framework/agent-guides/developers.md (backend)
@@ -82,7 +83,8 @@ project-root/
     │   │   ├── spec.schema.yml
     │   │   ├── system-spec.schema.yml
     │   │   ├── task-file.schema.yml
-    │   │   └── draft.template.md
+    │   │   ├── draft.template.md
+    │   │   └── plan.template.md
     │   ├── workflow/                # Phase playbooks — loaded by orchestrator on phase entry
     │   │   ├── discovery.md
     │   │   ├── architecture.md
@@ -285,7 +287,14 @@ WonfloWoo role intent is stable; execution differs by platform primitives.
    - Spawns Sisyphus-Junior and routes model selection by category.
 
 3. **`@agent` in Claude Code**
-   - Delegates to an isolated sub-agent defined in `.claude/agents/*.md`.
+    - Delegates to an isolated sub-agent defined in `.claude/agents/*.md`.
+
+### Dispatch lookup enforcement
+
+- Workflow docs should name role intent (for example, "Spawn `plan-reviewer`").
+- The orchestrator must resolve that role via the mapping table before dispatch (`plan-reviewer` → `task(subagent_type="momus")` on OmO).
+- **CRITICAL:** Never pass role names as `subagent_type` values.
+- OmO dispatch prompts must include `Role: {role-name}` as the first line.
 
 ---
 

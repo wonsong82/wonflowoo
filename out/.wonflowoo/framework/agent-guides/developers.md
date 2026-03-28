@@ -10,8 +10,11 @@
 
 ## Mandatory Workflow
 
-1. **Write plan first** to `.wonflowoo/workspace/tasks/{task-id}-{origin}.{task-name}.plan.md`
-2. Plan must include: files to create/modify, approach, order, edge cases, acceptance-criteria mapping
+1. **Write plan** to `.wonflowoo/workspace/tasks/{task-id}-{origin}.{task-name}.plan.md`
+   - Use the template at `.wonflowoo/framework/schemas/plan.template.md`
+   - Fill in the header (Task, Wave, Category, Status: draft) and the Implementation Plan section
+   - Leave the Review section empty — the plan-reviewer fills it
+2. Plan content must include: files to create/modify, approach, order, edge cases, acceptance-criteria mapping
 3. **STOP after plan** and report back
 4. Implement only after explicit approval dispatch
 5. After implementation, write a **change manifest** in your completion report

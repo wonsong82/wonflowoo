@@ -111,7 +111,7 @@ Spawn the developer role that matches task complexity/category (`sr-dev`, `jr-de
 
 Review each `.plan.md` before any coding starts.
 
-Review can be done by you (simple tasks) or by spawned tech lead reviewers (recommended for medium+ or risky tasks).
+Review can be done by you (simple tasks) or by spawned `plan-reviewer` (recommended for medium+ or risky tasks).
 
 Reviewer check is **holistic alignment**, not syntax-only:
 - Load `.wonflowoo/workspace/specs/_system.yml`
@@ -120,9 +120,13 @@ Reviewer check is **holistic alignment**, not syntax-only:
 - Compare task file ↔ developer plan ↔ current system reality
 - Validate acceptance criteria coverage, conventions, dependencies, edge cases, and architecture fit
 
-Reviewer output: APPROVE or REJECT with specific issues.
+**Reviewer does two things:**
+1. **Updates the plan file** — fills in the Review section (Verdict, Confidence, Suggestions/Issues) and updates Status in the header (`draft` → `approved` or `rejected`). This is for the developer — they see the suggestions when they load the plan for implementation.
+2. **Reports verdict to orchestrator** — a one-line response: `APPROVED {task-id}` or `REJECTED {task-id}: {reason}`. This is for the orchestrator — no need to read the plan file.
 
-If REJECTED, send revision feedback to the same developer role and request plan revision only (no implementation).
+If **APPROVED** → orchestrator proceeds to Step 4.
+
+If **REJECTED** → send the developer back to revise (Status → `revision`). Max 3 blocking issues per rejection.
 
 ---
 

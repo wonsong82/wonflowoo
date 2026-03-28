@@ -45,7 +45,10 @@ AI coding agents today have no standard way to understand and operate within a p
 │   ├── greenfield-v3.md
 │   ├── greenfield-v4.md
 │   ├── bootstrap.md
-│   └── add-feature.md
+│   ├── bootstrap-v2.md
+│   ├── add-feature.md
+│   ├── momus-context-loading.md
+│   └── plan-reviewer.md
 └── tests/                     # E2E test environments (gitignored — local only)
 ```
 
@@ -271,4 +274,12 @@ Required structure:
    ```
 
 Keep test folder for review — do NOT clean up until the user confirms.
+
+**After writing GAP_ANALYSIS.md, ALWAYS copy it to `test-results/`:**
+```bash
+cp tests/{case-name}/GAP_ANALYSIS.md test-results/{case-name}.md
 ```
+
+This is the permanent record. Test folders in `tests/` are gitignored and local-only. `test-results/` is committed.
+
+**NEVER delete test folders** unless the user explicitly asks. They contain generated source code, specs, and artifacts useful for review.

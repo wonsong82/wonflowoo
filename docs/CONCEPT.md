@@ -163,7 +163,7 @@ Spawned tech leads have the **same contextual understanding** as the main tech l
 
 - Receive self-contained task instruction files from the tech lead
 - Specialized by execution role (`sr-dev`, `jr-dev`, `quick-dev`, `frontend-dev`) — determines model routing
-- **Create their own detailed implementation plans** in a fresh session — loading task file + arch docs + relevant specs + actual code
+- **Create their own detailed implementation plans** in a fresh session — using `.wonflowoo/framework/schemas/plan.template.md`, loading task file + arch docs + relevant specs + actual code
 - **Must align their plan with the tech lead before implementing** (see Phase 4: Delegation + Developer Planning)
 - After implementation, **report a change manifest** (files changed + interfaces/data touched); a dedicated `spec-updater` updates specs
 
@@ -794,7 +794,7 @@ DELEGATION
     ▼
 DEVELOPER PLANNING (per developer)
     ├── Load task file + arch docs + specs + code
-    ├── Create implementation plan
+    ├── Create implementation plan (from .wonflowoo/framework/schemas/plan.template.md)
     ├── Align with orchestrator
     ▼
 IMPLEMENTATION
@@ -818,7 +818,7 @@ These are separate dispatches. Plan+implement in one dispatch is never allowed.
 
 - **Orchestrator plan (`.wonflowoo/workspace/plans/`)**: WHAT + ORDER (high-level briefs, waves, dependencies)
 - **Task instruction files (`.wonflowoo/workspace/tasks/*.yml`)**: self-contained technical user stories for execution
-- **Developer plan (`.wonflowoo/workspace/tasks/*.plan.md`)**: HOW for current codebase reality
+- **Developer plan (`.wonflowoo/workspace/tasks/*.plan.md`)**: HOW for current codebase reality, using `.wonflowoo/framework/schemas/plan.template.md`
 
 The orchestrator plan stays high-level. Detailed task files are generated **per wave** with current architecture/spec context loaded at generation time.
 
@@ -859,6 +859,11 @@ Developer plan companion file:
 
 Each task file includes at minimum: `task`, `wave`, `status`, `plan_ref` (planned tasks), `category`, `context`, `brief`, `architecture_refs`, `spec_refs`, `adr_refs`, `must_do`, `must_not_do`, `acceptance_criteria`, `depends_on`, `blocks`.
 
+Developer plan files use this structure (see `.wonflowoo/framework/schemas/plan.template.md`):
+- **Header**: `Task`, `Wave`, `Category`, `Status` (`draft | approved | rejected | revision`)
+- **Implementation Plan**: developer-authored, freeform execution details
+- **Review**: reviewer-authored `Verdict`, `Confidence`, `Suggestions`, `Blocking Issues`
+
 ### Mandatory Plan Review Gate
 
 Before coding, each developer plan is reviewed by orchestrator or (recommended for Medium+) a `plan-reviewer` role.
@@ -869,7 +874,18 @@ This review is **holistic alignment**, not syntax-only:
 - dependency and sequencing sanity
 - conventions/guardrails compliance
 
+Plan review is a two-part action:
+1. Reviewer updates the `.plan.md` directly (fills **Review** section and updates `Status`).
+2. Reviewer reports a one-line verdict to orchestrator: `APPROVED {task-id}` or `REJECTED {task-id}`.
+
+The orchestrator remains lean and tracks review state from verdict reports, not by re-reading plan files for status.
+
 `plan-reviewer` outputs APPROVE or REJECT with concrete blocking issues. Rejected plans loop back to developer planning only.
+
+Non-blocking suggestions protocol:
+- Suggestions are written in the plan file's **Review** section.
+- Developer sees them when reloading the plan for implementation.
+- Non-blocking suggestions do not block approval.
 
 ### Progress + Failure Handling
 

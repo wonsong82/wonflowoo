@@ -79,6 +79,8 @@ Every implementation task goes through exactly three dispatches:
 2. **Tech lead reviews the plan** for holistic alignment → APPROVES or REJECTS
 3. **Developer implements** the approved plan → reports changes
 
+Developer plans follow a structured template with a dedicated **Review** section. The reviewer fills verdict/suggestions there, and the developer sees that feedback when reloading the plan for implementation.
+
 This catches spec drift, architecture conflicts, and missing context **before** code is written.
 
 ### Spec-Updater — Keeping the Model Current
@@ -108,6 +110,7 @@ The pipeline scales to 500+ file projects by writing intermediate results to dis
 project-root/
 ├── AGENTS.md / CLAUDE.md           # Platform manual (auto-loaded)
 ├── .claude/                        # Claude Code platform (agents, skills)
+│   └── skills/token-usage/         # Shared token usage tracking skill
 ├── .opencode/                      # OmO platform (plugin config)
 └── .wonflowoo/
     ├── framework/                  # Copied once during adoption
