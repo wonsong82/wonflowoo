@@ -60,7 +60,7 @@ When entering a phase, **load `.wonflowoo/framework/workflow/{phase}.md`**.
 
 Workflow docs reference roles by name (e.g., "Spawn `plan-reviewer`"). When you see a role name, **look up the exact OmO Dispatch value** from this table and use it verbatim. Do NOT use the role name as the subagent_type or category — the role name and the dispatch value are different things.
 
-Example: workflow says "Spawn `plan-reviewer`" → look up table → `task(subagent_type="momus")`. NOT `task(subagent_type="plan-reviewer")`.
+Example: workflow says "Spawn `plan-reviewer`" → look up table → `task(subagent_type="sisyphus")`. NOT `task(subagent_type="plan-reviewer")`.
 
 **Also:** Always include `Role: {role-name}` as the first line of every dispatch prompt. This is how the sub-agent identifies which section of this file applies to them.
 
